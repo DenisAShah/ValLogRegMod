@@ -300,77 +300,75 @@ vdata$pred <- predict(fit_lrm1,
               type = "fitted.ind",
               newdata = vdata)
 
-# Age
-oldpar <- par(mfrow = c(2, 2))
+# Positive teratoma tumor
+oldpar <- par(mfrow = c(2, 3))
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(vdata$ter_pos,
+  vdata$pred,
+  bty = "n",
+  ylim = c(0, 1),
+  xlab = "Positive teratoma tumor",
+  ylab = "Estimated risk"
+)
+# Elevated AFP
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(vdata$preafp,
+  vdata$pred,
+  bty = "n",
+  ylim = c(0, 1),
+  xlab = "Elevated AFP levels",
+  ylab = "Estimated risk"
+)
+
+# Elevated HCG
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(vdata$prehcg,
+  vdata$pred,
+  bty = "n",
+  ylim = c(0, 1),
+  xlab = "Elevated HGC levels",
+  ylab = "Estimated risk"
+)
+
+# Postchemotherapy mass size
 par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$sqpost,
   vdata$pred,
   bty = "n",
-  xlim = c(65, 100),
-  ylim = c(0, .6),
+  xlim = c(0, 20),
+  ylim = c(0, 1),
   xlab = "Square root of postchemotherapy mass size",
   ylab = "Estimated risk"
 )
 lines(
-  lowess(vdata$age, vdata$pred),
+  lowess(vdata$sqpost, vdata$pred),
   col = "red",
   lwd = 2
 )
 
-# Size
+# Reduction mass size
 par(xaxs = "i", yaxs = "i", las = 1)
-plot(
-  vdata$size,
+plot(vdata$reduc10,
   vdata$pred,
   bty = "n",
-  xlim = c(0, 12),
-  ylim = c(0, .6),
-  xlab = "Size of tumor",
-  ylab = "Predicted risk"
+  xlim = c(0, 10),
+  ylim = c(0, 1),
+  xlab = "Reduction mass size",
+  ylab = "Estimated risk"
 )
 lines(
-  lowess(vdata$size, vdata$pred),
+  lowess(vdata$reduc10, vdata$pred),
   col = "red",
   lwd = 2
 )
 
-# HR status
-par(xaxs = "i", yaxs = "i", las = 1)
-plot(
-  vdata$hr_status,
-  vdata$pred,
-  ylim = c(0, .6),
-  bty = "n",
-  xlab = "Receptor status",
-  ylab = "Predicted risk"
-)
-
-# Nodal status
-par(xaxs = "i", yaxs = "i", las = 1)
-plot(
-  vdata$ncat,
-  vdata$pred,
-  ylim = c(0, .6),
-  bty = "n",
-  xlab = "Nodal status",
-  ylab = "Predicted risk"
-)
-par(oldpar)
-
-par(xaxs = "i", yaxs = "i", las = 1)
-plot(vdata$sqpost,
-     vdata$pred,
-     bty = "n",
-     xlab = "Square root of postchemotherapy mass size",
-     ylab = "Estimated risk"
-)
 ```
 </details>
 
 ```{r, plot_risk, fig.align='center',warning=FALSE, echo=FALSE, eval=TRUE}
 ```
 
-## Goal 2 - Assessing performance of a competing risks prediction model
+## Goal 2 - Assessing performance of a logistic regression risk prediction model
 
 Here we evaluate the performance of the prediction model in terms of calibration, discrimination and overall prediction error. 
 
@@ -397,102 +395,9 @@ ICI, E50, E90, Emax and root squared bias using pseudo value approach.
 
 ##### 2.1.1.1 Calibration plot using pseudo observations
 
-<details>
-  <summary>Click to expand code</summary>
-```{r, cal, fig.align='center',warning=FALSE,message=FALSE,eval=FALSE,echo=TRUE}
-# Models ----------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
-
-# Predicted risk estimation
-pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  times = horizon,
-  newdata = vdata
-)
-
-
-# Calibration plot (pseudo-obs approach) ----------------------------------
-# First compute riskRegression::Score()
-score_vdata <- Score(
-  list("csh_validation" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = vdata,
-  conf.int = TRUE,
-  times = horizon,
-  #  metrics = c("auc", "brier"),
-  summary = c("ipa"),
-  cause = primary_event,
-  plots = "calibration"
-)
-
-calplot_pseudo <- plotCalibration(
-  x = score_vdata,
-  brier.in.legend = FALSE,
-  auc.in.legend = FALSE,
-  cens.method = "pseudo",
-  bandwidth = 0.05, # leave as NULL for default choice of smoothing
-  cex = 1,
-  round = FALSE, # Important, keeps all unique risk estimates rather than rounding
-  xlim = c(0, 0.6),
-  ylim = c(0, 0.6),
-  rug = TRUE,
-  xlab = "Predictions",
-  bty = "n"
-)
-title("Calibration plot using pseudo observations")
-```
-</details>
-
-```{r, cal, fig.align='center',warning=FALSE,message=FALSE,eval=TRUE,echo=FALSE}
-```
 
 Calibration plot suggests that the prediction model seems to overestimate the actual risk, especially at the lower and higher values of the estimated risk.
 
-##### 2.1.1.2 Numerical summaries of calibration using pseudo observations
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, num_cal_pseudo, fig.align='center',warning=FALSE,message=FALSE,echo=TRUE,eval=TRUE}
-
-# We can extract predicted and observed, observed will depend on degree of smoothing (bandwidth)
-dat_pseudo <- calplot_pseudo$plotFrames$csh_validation
-
-# Calculate difference between predicted and observed (make sure to use all estimated risks, not just unique ones)
-diff_pseudo <- pred - dat_pseudo$Obs[match(pred, dat_pseudo$Pred)]
-
-# Collect all numerical summary measures
-numsum_pseudo <- c(
-  "ICI" = mean(abs(diff_pseudo)),
-  setNames(quantile(abs(diff_pseudo), c(0.5, 0.9)), c("E50", "E90")),
-  "Emax" = max(abs(diff_pseudo)),
-  "Root squared bias" = sqrt(mean(diff_pseudo^2))
-)
-```
-</details>
-
-
-```{r, res_cal_pseudo, fig.align='center',warning=FALSE,message=FALSE,echo=FALSE}
-# rootmeansquared, E50, E90, Emax, int, slope,
-k <- 4
-res_num <- rbind(
-  "Calibration measures - pseudo observations" = numsum_pseudo
-)
-
-res_num <- round(res_num, k)
-kable(res_num) %>%
-  kable_styling("striped", position = "center")
-```
-Numerical calibration measures identified overestimation of the risk especially in the higher values of the estimated actual risk.
 
 #### 2.1.2 Calibration using the subdistribution hazard approach
 Here we assess calibration using the subdistribution hazard approach (Austin et al.)
@@ -588,34 +493,6 @@ numsum_fgr <- c(
   "Root squared bias" = sqrt(mean(diff_fgr^2))
 )
 
-# Plot calibration plots from both methods together
-# par(xaxs = "i", yaxs = "i", las = 1)
-# plot(
-#   x = dat_fgr$pred,
-#   y = dat_fgr$obs,
-#   type = "l",
-#   xlim = c(0, 0.6),
-#   ylim = c(0, 0.6),
-#   col = "blue",
-#   lwd = 2,
-#   xlab = "Predictions",
-#   ylab = "Estimated actual risk",
-#   bty = "n"
-# )
-# lines(x = dat_pseudo$Pred,
-#       y = dat_pseudo$Obs,
-#       col = "lightblue",
-#       lwd = 2)
-# abline(a = 0, b = 1, lty = "dashed", col = "red")
-# legend(
-#   x = 0,
-#   y = 0.6,
-#   legend = c("Subdistribution", "Pseudo-observations"),
-#   col = c("blue", "lightblue"),
-#   lty = rep(1, 2),
-#   lwd = rep(2, 2),
-#   bty = "n"
-# )
 ```
 
 ```{r, res_cal_sd, fig.align='center',warning=FALSE,message=FALSE,echo=FALSE}
@@ -630,67 +507,6 @@ kable(res_num) %>%
 ```
 Numerical calibration measures identified overestimation of the risk especially in the higher values of the estimated actual risk.
 
-#### 2.1.2.3 Calibration plot using pseudo-observations (LOESS smoothing)
-
-<details>
-  <summary>Click to expand code</summary>
-```{r loess_pseudo, echo=TRUE, eval=FALSE}
-# Use pseudo-observations calculated by Score() (can alternatively use pseudo::pseudoci)
-pseudos <- data.frame(score_vdata$Calibration$plotframe)
-pseudos <- pseudos[order(pseudos$risk), ]
-
-# Use linear loess (weighted local regression with polynomial degree = 1) smoothing
-smooth_pseudos <- predict(
-  stats::loess(pseudovalue ~ risk, data = pseudos, degree = 1, span = 0.33), 
-  se = TRUE
-)
-
-# Calibration plot (reported in manuscript):
-
-# First, prepare histogram of estimated risks for x-axis
-spike_bounds <- c(-0.075, 0)
-bin_breaks <- seq(0, 0.6, length.out = 100 + 1)
-freqs <- table(cut(pred, breaks = bin_breaks))
-bins <- bin_breaks[-1]
-freqs_valid <- freqs[freqs > 0]
-freqs_rescaled <- spike_bounds[1] + (spike_bounds[2] - spike_bounds[1]) * 
-  (freqs_valid - min(freqs_valid)) / (max(freqs_valid) - min(freqs_valid))
-
-# Produce plot
-plot(
-  x = pseudos$risk, 
-  y = pseudos$pseudovalue,
-  xlim = c(0, 0.6), 
-  ylim = c(spike_bounds[1], 0.6),
-  yaxt = "n",
-  frame.plot = FALSE,
-  xlab = "Estimated risks",
-  ylab = "Observed outcome proportions", 
-  type = "n"
-)
-axis(2, seq(0, 0.6, by = 0.1), labels = seq(0, 0.6, by = 0.1))
-polygon(
-  x = c(pseudos$risk, rev(pseudos$risk)),
-  y = c(
-    pmax(smooth_pseudos$fit - qt(0.975, smooth_pseudos$df) * smooth_pseudos$se, 0),
-    rev(smooth_pseudos$fit + qt(0.975, smooth_pseudos$df) * smooth_pseudos$se)
-  ),
-  border = FALSE,
-  col = "lightgray"
-)
-abline(a = 0, b = 1, col = "gray")
-lines(x = pseudos$risk, y = smooth_pseudos$fit, lwd = 2)
-segments(
-  x0 = bins[freqs > 0], 
-  y0 = spike_bounds[1], 
-  x1 = bins[freqs > 0], 
-  y1 = freqs_rescaled
-)
-```
-</details>
-
-```{r loess_pseudo, echo=FALSE, eval=TRUE}
-```
 
 
 #### 2.1.3 Observed and Expected ratio
