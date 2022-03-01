@@ -696,25 +696,24 @@ The calibration intercept was estimated at -0.15 [95% CI -0.36 to 0.05] also poi
 
 We here calculate
 
-+ The 5-year C-index. More details are in the main manuscript and its references;
-+ The 5-year time-dependent AUC. More details are in the manuscript and in its references;  
-  + Plot time-dependent AUC over the time;
-  
++ The c-statistic: it is a rank order statistic for predictions against true outcomes. The concordance (c) statistic is the most commonly used performance measure to indicate the discriminative ability of generalized linear regression models. For a binary outcome, c is identical to the area under the Receiver Operating Characteristic (ROC) curve, which plots the sensitivity (true positive rate) against 1 – (false positive rate) for consecutive cutoffs for the probability of an outcome. Accurate predictions discriminate between those with and those without the outcome.
+
++ Discrimination slope: it can be used as a simple measure for how well subjects with and without the outcome are separated. It is calculated as the absolute difference in average predictions for those with and without the outcome. Visualization is readily possible with a box plot or a histogram, which will show less overlap between those with and those without the outcome for a better discriminating model. 
+ 
+
+More details are in the main manuscript and its references;
+
 + Royston-Sauerbrei D statistic and R<sup>2</sup><sub>D</sub> as a measure of prognostic separation;  
 
   
-#### 2.2.1 C-index and time-dependent AUC
+#### 2.2.1 C-statistic 
 
 <details>
   <summary>Click to expand code</summary>
 ```{r, discrimination,warning=FALSE,message=FALSE,echo=TRUE}
+
 # Models
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
+
 
 # useful objects
 primary_event <- 1 # Set to 2 if cause 2 was of interest
@@ -723,78 +722,9 @@ horizon <- 5 # Set time horizon for prediction (here 5 years)
 # C-index
 # Development set (Apparent validation)
 
-C_rdata <- pec::cindex(
-  object = fit_csh,
-  formula = Hist(time, status_num) ~ 1,
-  cause = primary_event,
-  eval.times = horizon,
-  data = rdata
-)$AppCindex$CauseSpecificCox
+# Internal validation (bootstrapping)
 
-# Validation set
-C_vdata <- pec::cindex(
-  object = fit_csh,
-  formula = Hist(time, status_num) ~ 1,
-  cause = primary_event,
-  eval.times = horizon,
-  data = vdata
-)$AppCindex$CauseSpecificCox
-
-
-# Bootstraping C-index to calculate the bootstrap percentile confidence intervals
-
-B <- 100
-set.seed(1234)
-rboot <- bootstraps(rdata, times = B) # development - bootstrap
-vboot <- bootstraps(vdata, times = B) # validation - bootstrap
-
-C_boot <- function(split) {
-  pec::cindex(
-    object = fit_csh,
-    formula = Hist(time, status_num) ~ 1,
-    cause = primary_event,
-    eval.times = horizon,
-    data = analysis(split)
-  )$AppCindex$CauseSpecificCox
-}
-
-# Run time-dependent AUC in the bootstrapped development and validation data
-# to calculate the non-parametric CI through percentile bootstrap
-rboot <- rboot %>% mutate(
-  C_rboot = map_dbl(splits, C_boot),
-)
-vboot <- vboot %>% mutate(
-  C_vboot = map_dbl(splits, C_boot),
-)
-
-
-# Time-dependent AUC ---------
-
-# Development data
-score_rdata <- Score(
-  list("csh_development" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = rdata,
-  conf.int = TRUE,
-  times = horizon,
-  metrics = c("auc"),
-  cause = primary_event,
-  plots = "calibration"
-)
-
-# Validation data
-score_vdata <- Score(
-  list("csh_validation" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = vdata,
-  conf.int = TRUE,
-  times = horizon,
-  metrics = c("auc"),
-  cause = primary_event,
-  plots = "calibration"
-)
+# External validation
 ```
 </details>
 
