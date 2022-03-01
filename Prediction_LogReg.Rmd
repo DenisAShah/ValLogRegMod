@@ -694,7 +694,7 @@ The calibration intercept was estimated at -0.15 [95% CI -0.36 to 0.05] also poi
 
 ### 2.2 Discrimination
 
-We here calculate
+We here calculate:  
 
 + The c-statistic: it is a rank order statistic for predictions against true outcomes. The concordance (c) statistic is the most commonly used performance measure to indicate the discriminative ability of generalized linear regression models. For a binary outcome, c is identical to the area under the Receiver Operating Characteristic (ROC) curve, which plots the sensitivity (true positive rate) against 1 – (false positive rate) for consecutive cutoffs for the probability of an outcome. Accurate predictions discriminate between those with and those without the outcome.
 
@@ -713,18 +713,41 @@ More details are in ["Assessing the performance of prediction models: a framewor
 ```{r, discrimination,warning=FALSE,message=FALSE,echo=TRUE}
 
 # Models
-
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
 
 # C-index
+c_apparent <- round(0.5 * 
+                      (1 +
+                      val_lrm["Dxy","index.orig"]), 2) 
+
 # Development set (Apparent validation)
+val_lrm<- validate(fit = fit_lrm, B = 500)
+rdata$pred <- predict(fit_lrm, type = "fitted.ind")
+
+
 
 # Internal validation (bootstrapping)
+c_optimism <- round(0.5 * 
+                      (1 +
+                      val_lrm["Dxy","index.corrected"]), 2)
+
+val.prob(predict(fit_lrm, type = "fitted.ind"), as.numeric(rdata$tum_res) - 1, 
+                     pl = FALSE) %>% round(3)
 
 # External validation
+
+
+rdata$pred <- predict(fit_lrm, type = "fitted.ind")
+
+mean_group <- tapply(rdata$pred, rdata$tum_res, mean)
+discr_slope <- round(abs(mean_group[1] - mean_group[2]), 2)
+
 ```
 </details>
 
