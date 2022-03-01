@@ -701,7 +701,7 @@ We here calculate
 + Discrimination slope: it can be used as a simple measure for how well subjects with and without the outcome are separated. It is calculated as the absolute difference in average predictions for those with and without the outcome. Visualization is readily possible with a box plot or a histogram, which will show less overlap between those with and those without the outcome for a better discriminating model. 
  
 
-More details are in the main manuscript and its references;
+More details are in ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010);
 
 + Royston-Sauerbrei D statistic and R<sup>2</sup><sub>D</sub> as a measure of prognostic separation;  
 
