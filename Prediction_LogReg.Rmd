@@ -276,7 +276,7 @@ options(datadist = NULL)
 
 The coefficients of the models indicated that positive tumor teratoma, elevated prechemoterapy AFP levels, elevated prechemoterapy HCG levels, postchemotherapy mass size (mm) (expressed in square root) are associated with higher risk to residual tumor after resection. Reduction in mass size is associated with a reduced risk to have residual tumor after resection. 
 
-### 1.5 Plot of predictors vs estimated  in the validation data
+### 1.5 Plot of predictors vs estimated in the validation data
 
 To get further insight into the effect of the covariates, we plot the covariate values observed in the validation set against the estimated absolute risk of having residual tumor after resection. This gives an idea of the size of the effects.
 
@@ -721,32 +721,66 @@ fit_lrm <- lrm(tum_res ~
                data = rdata, x = T, y = T)
 options(datadist = NULL)
 
+
 # C-index
-c_apparent <- round(0.5 * 
-                      (1 +
-                      val_lrm["Dxy","index.orig"]), 2) 
+# Apparent validation
+val_rdata <- rcorr.cens(predict(fit_lrm), 
+                        S = rdata$tum_res)
 
-# Development set (Apparent validation)
-val_lrm <- validate(fit = fit_lrm, B = 500)
-rdata$pred <- predict(fit_lrm, type = "fitted.ind")
+# NOTE: This function needs to be commented
+c_function <- function(x, k = 3) {
+  se <- x["S.D."]/2
+  Lower95 <- x["C Index"] - 1.96*se
+  Upper95 <- x["C Index"] + 1.96*se
+  round(cbind(
+    "C-statistic" = x["C Index"],
+    Lower95, 
+    Upper95), k)
+}
 
+c_dev <- c_function(val_rdata)
 
+# Alternative:
+# val_opt <- validate(fit = fit_lrm, B = 500)
+# c_apparent <- round(0.5 * 
+#                       (1 +
+#                       val_rdata["Dxy","index.orig"]), 2) 
 
 # Internal validation (bootstrapping)
+val_opt <- validate(fit = fit_lrm, B = 500)
 c_optimism <- round(0.5 * 
                       (1 +
                       val_lrm["Dxy","index.corrected"]), 2)
 
-val.prob(predict(fit_lrm, type = "fitted.ind"), as.numeric(rdata$tum_res) - 1, 
-                     pl = FALSE) %>% round(3)
+# val.prob(predict(fit_lrm, type = "fitted.ind"), #as.numeric(rdata$tum_res) - 1, 
+#                      pl = FALSE) %>% round(3)
 
 # External validation
+val_vdata <- rcorr.cens(
+  predict(fit_lrm, newdata = vdata), 
+  S = vdata$tum_res)
 
+c_val <- c_function(val_vdata)
 
-rdata$pred <- predict(fit_lrm, type = "fitted.ind")
+res_c <- rbind(c_dev, c_val)
 
-mean_group <- tapply(rdata$pred, rdata$tum_res, mean)
-discr_slope <- round(abs(mean_group[1] - mean_group[2]), 2)
+# NOTE: This function needs to be commented
+discr_slope <- function(fit, y, new_data, k = 3) {
+  pred <- predict(fit, 
+                  newdata = new_data, 
+                  type = "fitted.ind")
+  mean_group <- tapply(pred, y, mean)
+  dslope <- round(abs(mean_group[1] - mean_group[2]), k)
+  names(dslope) <- "Discrimination slope"
+  return(dslope)
+}
+dslope_rdata <- discr_slope(fit_lrm,
+                            y = rdata$tum_res,
+                            new_data = rdata)
+dslope_vdata <- discr_slope(fit_lrm,
+                            y = vdata$tum_res,
+                            new_data = vdata)
+
 
 ```
 </details>
