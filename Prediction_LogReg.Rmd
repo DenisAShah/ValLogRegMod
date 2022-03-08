@@ -727,7 +727,7 @@ c_apparent <- round(0.5 *
                       val_lrm["Dxy","index.orig"]), 2) 
 
 # Development set (Apparent validation)
-val_lrm<- validate(fit = fit_lrm, B = 500)
+val_lrm <- validate(fit = fit_lrm, B = 500)
 rdata$pred <- predict(fit_lrm, type = "fitted.ind")
 
 
