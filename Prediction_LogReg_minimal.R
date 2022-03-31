@@ -84,6 +84,8 @@ vdata$pred <- predict(fit_lrm,
                       type = "response")
 
 # ....
+cal_plot <- val.prob(vdata$pred,
+                     vdata$y)
 
 
 # Overall performances ---------------------
