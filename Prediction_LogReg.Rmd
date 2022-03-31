@@ -370,329 +370,10 @@ lines(
 
 ## Goal 2 - Assessing performance of a logistic regression risk prediction model
 
-Here we evaluate the performance of the prediction model in terms of calibration, discrimination and overall prediction error. 
+Here we evaluate the performance of the prediction model in terms of discrimination, calibration and overall prediction error. 
 
 
-### 2.1 Calibration
-
-We assess calibration by:
-
-- The calibration plot as a graphical representation of calibration using
- the pseudo observations and the subdistribution hazard approach
- - Numerical summaries of calibration:  
- - The observed vs expected ratio (O/E ratio) ;  
- - The squared bias, i.e., the average squared difference between actual risks and risk predictions;
- - The integrated Calibration Index (ICI), i.e., the average absolute difference between actual risks and risk predictions;  
- - E50, E90 and Emax denote the median, 90th percentile and the maximum of the absolute differences between actual risks and risk predictions;  
- - Calibration intercept/slope estimated using pseudo observations:  
- - If on average the risk estimates equal the actual risks, the calibration intercept will be zero. A negative calibration intercept indicates that the risk estimates are on average too high and a positive intercept indicates that the risk estimates are on average too low.   
- - A calibration slope between 0 and 1 indicates overfitting of the model, i.e., too extreme predictions, both on the low and on the high         end. A calibration slope >1 indicates predictions do not show enough variation.  
-      
-#### 2.1.1 Calibration using pseudo observations
-
-We calculate calibration plot and numerical summaries of calibration as
-ICI, E50, E90, Emax and root squared bias using pseudo value approach.
-
-##### 2.1.1.1 Calibration plot using pseudo observations
-
-
-Calibration plot suggests that the prediction model seems to overestimate the actual risk, especially at the lower and higher values of the estimated risk.
-
-
-#### 2.1.2 Calibration using the subdistribution hazard approach
-Here we assess calibration using the subdistribution hazard approach (Austin et al.)
-
-##### 2.1.2.1 Calibration plot using the subdistribution hazard approach
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, plot_sd, fig.align='center',warning=FALSE,message=FALSE,eval=FALSE,echo=TRUE}
-# Models ----------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
-
-
-# Calibration plot (flexible regression approach) -------------------------
-
-# Add estimated risk and complementary log-log of it to dataset
-vdata$pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  newdata = vdata,
-  times = horizon
-)
-vdata$cll_pred <- log(-log(1 - pred))
-
-# 5 knots seems to give somewhat equivalent graph to pseudo method with bw = 0.05
-n_internal_knots <- 5 # Austin et al. advise to use between 3 (more smoothing, less flexible) and 5 (less smoothing, more flexible)
-rcs_vdata <- ns(vdata$cll_pred, df = n_internal_knots + 1)
-colnames(rcs_vdata) <- paste0("basisf_", colnames(rcs_vdata))
-vdata_bis <- cbind.data.frame(vdata, rcs_vdata)
-
-# Use subdistribution hazards (Fine-Gray) model
-form_fgr <- reformulate(
-  termlabels = colnames(rcs_vdata),
-  response = "Hist(time, status_num)"
-)
-
-# Regress subdistribution of event of interest on cloglog of estimated risks
-calib_fgr <- FGR(
-  formula = form_fgr,
-  cause = primary_event,
-  data = vdata_bis
-)
-
-# Add observed and predicted together in a data frame
-dat_fgr <- cbind.data.frame(
-  "obs" = predict(calib_fgr, times = horizon, newdata = vdata_bis),
-  "pred" = vdata$pred
-)
-
-# Calibration plot
-dat_fgr <- dat_fgr[order(dat_fgr$pred), ]
-par(xaxs = "i", yaxs = "i", las = 1)
-plot(
-  x = dat_fgr$pred,
-  y = dat_fgr$obs,
-  type = "l",
-  xlim = c(0, 0.6),
-  ylim = c(0, 0.6),
-  xlab = "Predictions",
-  ylab = "Estimated actual risk",
-  bty = "n"
-)
-abline(a = 0, b = 1, lty = "dashed", col = "red")
-title("Calibration plot using subdistribution hazard approach")
-```
-</details>
-
-```{r, plot_sd, fig.align='center',warning=FALSE,message=FALSE,echo=FALSE,eval=TRUE}
-```
-
-Calibration plot suggests that the prediction model seems to overestimate the actual risk, especially at the lower and higher values of the estimated risk.
-
-##### 2.1.2.2 Numerical summaries of calibration using the subdistribution hazard approach
-Here we assess calibration using the subdistribution hazard approach (Austin et al.)
-
-```{r, num_cal_sd, fig.align='center',warning=FALSE,message=FALSE}
-# Numerical summary measures
-diff_fgr <- dat_fgr$pred - dat_fgr$obs
-
-numsum_fgr <- c(
-  "ICI" = mean(abs(diff_fgr)),
-  setNames(quantile(abs(diff_fgr), c(0.5, 0.9)), c("E50", "E90")),
-  "Emax" = max(abs(diff_fgr)),
-  "Root squared bias" = sqrt(mean(diff_fgr^2))
-)
-
-```
-
-```{r, res_cal_sd, fig.align='center',warning=FALSE,message=FALSE,echo=FALSE}
-k <- 4
-res_num <- rbind(
-  "Calibration measures - subdistribution " = numsum_fgr
-)
-
-res_num <- round(res_num, k)
-kable(res_num) %>%
-  kable_styling("striped", position = "center")
-```
-Numerical calibration measures identified overestimation of the risk especially in the higher values of the estimated actual risk.
-
-
-
-#### 2.1.3 Observed and Expected ratio
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, oe_ratio, fig.align='center',warning=FALSE,message=FALSE,echo=TRUE}
-
-# Models ----------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
-
-# Add estimated risk and complementary log-log of it to dataset
-pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  newdata = vdata,
-  times = horizon
-)
-
-## Observed/Expected ratio --------------------------------------------
-# First calculate Aalen-Johansen estimate (as 'observed')
-obj <- summary(survfit(Surv(time, status) ~ 1,
-  data = vdata
-),
-times = horizon
-)
-
-aj <- list(
-  "obs" = obj$pstate[, primary_event + 1],
-  "se" = obj$std.err[, primary_event + 1]
-)
-
-
-# Calculate O/E
-OE <- aj$obs / mean(pred)
-
-# For the confidence interval we use method proposed in Debray et al. (2017) doi:10.1136/bmj.i6460
-k <- 2
-alpha <- 0.05
-OE_summary <- cbind(
-  "OE" = OE,
-  "Lower .95" = exp(log(OE - qnorm(1 - alpha / 2) * aj$se / aj$obs)),
-  "Upper .95" = exp(log(OE + qnorm(1 - alpha / 2) * aj$se / aj$obs))
-)
-
-OE_summary <- round(OE_summary, k)
-```
-</details>
-
-```{r, res_OE, echo=FALSE}
-# OE, rootmeansquared, E50, E90, Emax, int, slope,
-
-kable(OE_summary) %>%
-  kable_styling("striped", position = "center")
-```
-
-Observed and expected ratio shown slight overestimation of the risk predicted by the model.
-
-#### 2.1.4 Calibration intercept and slope using pseudo observations
-
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, cal_intslope_pseudo, fig.align='center',warning=FALSE,message=FALSE, echo=TRUE}
-
-# Models ----------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
-
-# Predicted risk estimation
-pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  times = horizon,
-  newdata = vdata
-)
-
-
-# Calibration plot (pseudo-obs approach) ----------------------------------
-# First compute riskRegression::Score()
-score_vdata <- Score(
-  list("csh_validation" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = vdata,
-  conf.int = TRUE,
-  times = horizon,
-  #  metrics = c("auc", "brier"),
-  summary = c("ipa"),
-  cause = primary_event,
-  plots = "calibration"
-)
-
-
-## Calibration intercept and slope --------------------------------------
-# Use pseudo-observations calculated by Score() (can alternatively use pseudo::pseudoci)
-pseudos <- data.frame(score_vdata$Calibration$plotframe)
-
-# Note:
-# - 'pseudos' is the data.frame with ACTUAL pseudo-observations, not the smoothed ones
-# - Column ID is not the id in vdata; it is just a number assigned to each row of
-# the original validation data sorted by time and event indicator
-pseudos$cll_pred <- log(-log(1 - pseudos$risk)) # add the cloglog risk ests
-
-# Fit model for calibration intercept
-fit_cal_int <- geese(
-  pseudovalue ~ offset(cll_pred),
-  data = pseudos,
-  id = ID,
-  scale.fix = TRUE,
-  family = gaussian,
-  mean.link = "cloglog",
-  corstr = "independence",
-  jack = TRUE
-)
-
-# Fit model for calibration slope
-fit_cal_slope <- geese(
-  pseudovalue ~ offset(cll_pred) + cll_pred,
-  data = pseudos,
-  id = ID,
-  scale.fix = TRUE,
-  family = gaussian,
-  mean.link = "cloglog",
-  corstr = "independence",
-  jack = TRUE
-)
-
-# Perform joint test on intercept and slope
-betas <- fit_cal_slope$beta
-vcov_mat <- fit_cal_slope$vbeta
-wald <- drop(betas %*% solve(vcov_mat) %*% betas)
-# pchisq(wald, df = 2, lower.tail = FALSE)
-```
-</details>
-
-```{r, res_cal_intslope, echo=FALSE}
-k <- 2
-res_cal <- rbind(
-
-  # Value, confidence interval and test for calibration intercept
-  "Intercept" = with(
-    summary(fit_cal_int)$mean,
-    c(
-      "estimate" = estimate,
-      `2.5 %` = estimate - qnorm(0.975) * san.se,
-      `97.5 %` = estimate + qnorm(0.975) * san.se
-    )
-  ),
-
-  # Value, confidence interval and test for calibration slope
-  "Slope" = with(
-    summary(fit_cal_slope)$mean["cll_pred", ],
-    c(
-      "estimate" = 1 + estimate,
-      `2.5 %` = 1 + (estimate - qnorm(0.975) * san.se),
-      `97.5 %` = 1 + (estimate + qnorm(0.975) * san.se)
-    )
-  )
-)
-
-res_cal <- round(res_cal, k)
-kable(res_cal) %>%
-  kable_styling("striped", position = "center")
-```
-
-The calibration intercept was estimated at -0.15 [95% CI -0.36 to 0.05] also pointing towards slight overestimation (though not statistically significant). This number for example means that for an estimated risk of 30%, the expected actual risk is 1-0.7^(exp(-0.15))=26%. The calibration slope was 1.22 [95% CI 0.84 to 1.60], which would indicate too homogeneous predictions but the wide confidence interval precludes any firm conclusions from it. The p-value for the joint test on calibration intercept and slope was 0.09.
-
-### 2.2 Discrimination
+### 2.1 Discrimination
 
 We here calculate:  
 
@@ -750,7 +431,7 @@ c_dev <- c_function(val_rdata)
 val_opt <- validate(fit = fit_lrm, B = 500)
 c_optimism <- round(0.5 * 
                       (1 +
-                      val_lrm["Dxy","index.corrected"]), 2)
+                      val_opt["Dxy","index.corrected"]), 2)
 
 # val.prob(predict(fit_lrm, type = "fitted.ind"), #as.numeric(rdata$tum_res) - 1, 
 #                      pl = FALSE) %>% round(3)
@@ -781,6 +462,21 @@ dslope_vdata <- discr_slope(fit_lrm,
                             y = vdata$tum_res,
                             new_data = vdata)
 
+# Bootstrap confidence intervals for discrimination slope
+rboot <- bootstraps(rdata, B = 1000)
+vboot <- bootstraps(vdata, B = 1000)
+
+discr_slope_boot <- function(split) {
+  discr_slope(fit = fit_lrm,
+              y = analysis(split)$tum_res,
+              new_data = analysis(split))
+}
+
+rboot <- rboot |>
+  mutate(dslope = map_dbl(splits, discr_slope_boot))
+
+vboot <- vboot |>
+  mutate(dslope = map_dbl(splits, discr_slope_boot))
 
 ```
 </details>
@@ -788,245 +484,17 @@ dslope_vdata <- discr_slope(fit_lrm,
 ```{r, res_disc, fig.align='center',echo=FALSE}
 alpha <- .05
 k <- 2
-res_discr_csh <- matrix(c(
-  ## C-index
-  # Development CSH1
-  C_rdata,
-  quantile(rboot$C_rboot, probs = alpha / 2),
-  quantile(rboot$C_rboot, probs = 1 - alpha / 2),
 
-  # Validation CSH1
-  C_vdata,
-  quantile(vboot$C_vboot, probs = alpha / 2),
-  quantile(vboot$C_vboot, probs = 1 - alpha / 2),
+res_discr <-
 
-  ## Time-dependent AUC
-  # Development CSH1
-  score_rdata$AUC$score$AUC,
-  score_rdata$AUC$score$AUC -
-    qnorm(1 - alpha / 2) * score_rdata$AUC$score$se,
-  score_rdata$AUC$score$AUC +
-    qnorm(1 - alpha / 2) * score_rdata$AUC$score$se,
-
-  # Validation CSH1
-  score_vdata$AUC$score$AUC,
-  score_vdata$AUC$score$AUC -
-    qnorm(1 - alpha / 2) * score_vdata$AUC$score$se,
-  score_vdata$AUC$score$AUC +
-    qnorm(1 - alpha / 2) * score_vdata$AUC$score$se
-),
-nrow = 2, ncol = 6, byrow = T,
-dimnames = list(
-  c("C-index", "Time dependent AUC"),
-  rep(c("Estimate", "Lower .95", "Upper .95"), 2)
-)
-)
-res_discr_csh <- round(res_discr_csh, k)
-kable(res_discr_csh) %>%
-  kable_styling("striped", position = "center") %>%
-  add_header_above(c(
-    " " = 1,
-    "Development data" = 3,
-    "Validation data" = 3
-  ))
 ```
 
-The time-dependent AUC at 5 years was 0.71 in the validation set.
-
-#### 2.2.2 Plot Area under the curve(s) over the time
-We plot the time-dependent AUCs over the follow-up time using development and validation data. 
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, plot_AUCs, warning=FALSE,echo=TRUE, eval=FALSE}
-
-# Models --------------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-
-# AUCs development data
-AUC_rdata <- Score(
-  list("csh_development" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = rdata,
-  conf.int = TRUE,
-  times = seq(0.4, 5.1, 0.2),
-  metrics = c("auc"),
-  cause = primary_event
-)
-
-# AUCs validation data
-AUC_vdata <- Score(
-  list("csh_validation" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
-  data = vdata,
-  conf.int = TRUE,
-  times = seq(0.5, 5.01, 0.1),
-  metrics = c("auc"),
-  cause = primary_event
-)
-
-# Plot
-par(las = 1, xaxs = "i", yaxs = "i")
-oldpar <- par(mfrow = c(1, 2))
-plot(AUC_rdata$times,
-  AUC_rdata$AUC$score$AUC,
-  type = "l",
-  bty = "n",
-  xlim = c(0, 5),
-  ylim = c(.5, 1),
-  lwd = 2,
-  xlab = "Time (years)",
-  ylab = "AUC",
-  lty = 1
-)
-polygon(c(
-  AUC_rdata$times,
-  rev(AUC_rdata$times)
-),
-c(
-  AUC_rdata$AUC$score$lower,
-  rev(AUC_rdata$AUC$score$upper)
-),
-col = rgb(160, 160, 160, maxColorValue = 255, alpha = 100),
-border = FALSE
-)
-lines(AUC_rdata$times,
-  AUC_rdata$AUC$score$AUC,
-  col = "black",
-  lwd = 2,
-  lty = 2
-)
-title("Development data", adj = 0)
-
-# Validation data
-plot(AUC_vdata$times,
-  AUC_vdata$AUC$score$AUC,
-  type = "l",
-  bty = "n",
-  xlim = c(0, 5),
-  ylim = c(.5, 1),
-  lwd = 2,
-  xlab = "Time (years)",
-  ylab = "AUC",
-  lty = 1
-)
-polygon(c(
-  AUC_vdata$times,
-  rev(AUC_vdata$times)
-),
-c(
-  AUC_vdata$AUC$score$lower,
-  rev(AUC_vdata$AUC$score$upper)
-),
-col = rgb(160, 160, 160, maxColorValue = 255, alpha = 100),
-border = FALSE
-)
-lines(AUC_vdata$times,
-  AUC_vdata$AUC$score$AUC,
-  col = "black",
-  lwd = 2,
-  lty = 2
-)
-title("Validation data", adj = 0)
-```
-</details>
-
-```{r, plot_AUCs, warning=FALSE,echo=FALSE, eval=TRUE}
-```
-
-#### 2.2.3 Royston-Sauerbrei D statistic and R<sup>2</sup><sub>D</sub>
-
-We calculate Royston-Sauerbrei D statistic and R<sup>2</sup><sub>D</sub> as a measure of explained variation
-
-<details>
-  <summary>Click to expand code</summary>
-```{r, royston_R2D, fig.align='center', message=FALSE, warning=FALSE,echo=TRUE}
-# function to calculate D and R2D
-source(here::here("R/roystonD.R"))
-
-# Models ----------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
-
-# Predicted risk estimation
-rdata$pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  times = horizon,
-  newdata = rdata
-)
-
-vdata$pred <- predictRisk(fit_csh,
-  cause = primary_event,
-  times = horizon,
-  newdata = vdata
-)
-
-# Rank based on predicted values at 5 years
-
-rdata$rank <- rank(rdata$pred,
-  na.last = TRUE,
-  ties.method = "first"
-)
-
-vdata$rank <- rank(vdata$pred,
-  na.last = TRUE,
-  ties.method = "first"
-)
-
-
-res_rdata <- royston_R2D_cmprsk(
-  pred = rdata$pred,
-  data = rdata,
-  primary_event = 1,
-  time = rdata$time,
-  status = rdata$status_num
-)
-
-res_vdata <- royston_R2D_cmprsk(
-  pred = vdata$pred,
-  data = vdata,
-  primary_event = 1,
-  time = vdata$time,
-  status = vdata$status_num
-)
-```
-</details>
-
-```{r, res_D_R2D, fig.align='center',echo=FALSE}
-k <- 2
-res_D <- rbind(
-  "Development data" = res_rdata,
-  "Validation data" = res_vdata
-)
-
-res_D <- round(res_D, k)
-kable(res_D) %>%
-  kable_styling("striped", position = "center")
-```
-
-The R<sup>2</sup><sub>D</sub> showed how much of the observed variation in the outcome is explained by the prognostic model. The model explained 15% and 26% of the observed variation in the development and validation data, respectively.
+Comments discrimination
 
 
 ### 2.3 Overall prediction error
 
-We calculate the Brier Score, and the scaled Brier scale (also indicated by scaled Brier score or IPA) and the corresponding confidence intervals.
+We calculate the Brier Score, and the scaled Brier scale (also indicated as index of prediction accuracy) and the corresponding confidence intervals.
 
 Some confidence intervals are calculated using the bootstrap percentile method.
 ```{r, bootstrap,warning=FALSE}
@@ -1040,44 +508,37 @@ vboot <- bootstraps(vdata, times = B)
 ```{r, overall, warning=FALSE}
 
 # Models -------------------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-fit_csc1 <- fit_csh$models$`Cause 1`
-fit_csc2 <- fit_csh$models$`Cause 2`
+# Models
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
 
 # Overall performance measures ----------------
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
 
 # Development data
 score_rdata <- Score(
-  list("csh_development" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
+  list("Development set" = fit_lrm),
+  formula = tum_res ~ 1,
   data = rdata,
   conf.int = TRUE,
-  times = horizon,
   metrics = c("auc", "brier"),
   summary = c("ipa"),
-  cause = primary_event,
   plots = "calibration"
 )
-
+plotCalibration(score_rdata)
 # Validation data
 score_vdata <- Score(
-  list("csh_validation" = fit_csh),
-  formula = Hist(time, status_num) ~ 1,
-  cens.model = "km",
+  list("Validation set" = fit_lrm),
+  formula = tum_res ~ 1,
   data = vdata,
   conf.int = TRUE,
-  times = horizon,
   metrics = c("auc", "brier"),
   summary = c("ipa"),
-  cause = primary_event,
   plots = "calibration"
 )
 
@@ -1121,49 +582,26 @@ vboot <- vboot %>% mutate(
     x$Brier$score[model == "csh_validation"]$IPA
   })
 )
+
+
+olpar <- par(mfrow = c(2, 2))
+aa <- val.prob(vdata$pred,
+               as.numeric(vdata$tum_res) - 1)
+
+zz <- lowess(vdata$pred, as.numeric(vdata$tum_res) - 1, iter = 0)
+plot(zz$x, zz$y, 
+     type = "l",
+     xlim = c(0, 1),
+     ylim = c(0, 1),
+     bty = "n")
+
+plotCalibration(score_vdata)
+
 ```
 
 ```{r, res_ov, fig.align='center',echo=FALSE}
 # Table overall measures
-alpha <- .05
-k <- 2 # number of digits
-res_ov_csh <- matrix(unlist(c(
-  # Brier score - apparent validation
-  score_rdata$Brier$score[model == "csh_development"]$Brier,
-  score_rdata$Brier$score[model == "csh_development"]$lower,
-  score_rdata$Brier$score[model == "csh_development"]$upper,
 
-  # Brier score - external validation
-  score_vdata$Brier$score[model == "csh_validation"]$Brier,
-  score_vdata$Brier$score[model == "csh_validation"]$lower,
-  score_vdata$Brier$score[model == "csh_validation"]$upper,
-
-  # IPA - apparent validation
-  score_rdata$Brier$score[model == "csh_development"]$IPA,
-  quantile(rboot$scaled_brier, probs = alpha / 2),
-  quantile(rboot$scaled_brier, probs = 1 - alpha / 2),
-
-  # IPA - external validation
-  score_vdata$Brier$score[model == "csh_validation"]$IPA,
-  quantile(vboot$scaled_brier, probs = alpha / 2),
-  quantile(vboot$scaled_brier, probs = 1 - alpha / 2)
-)),
-nrow = 2, ncol = 6,
-byrow = T,
-dimnames =
-  list(
-    c("Brier", "scaled Brier"),
-    rep(c("Estimate", "Lower .95 ", "Upper .95"), 2)
-  )
-)
-res_ov <- round(res_ov_csh, 2) # Digits
-kable(res_ov) %>%
-  kable_styling("striped", position = "center") %>%
-  add_header_above(c(
-    " " = 1,
-    "Development data" = 3,
-    "Validation data" = 3
-  ))
 ```
 
 Note: unexpectedly, the point estimate for the Brier score is lower (thus better) and for the scaled Brier score is higher (thus better) in the validation data compared to the development data.
