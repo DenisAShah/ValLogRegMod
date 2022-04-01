@@ -15,8 +15,9 @@ vdata <- readRDS("Data/vdata.rds")
 # Set seed (for bootstrapping)
 set.seed(2022)
 
-# Fit logistic model ---------------------------------------
+# Fit logistic models ---------------------------------------
 
+# Basic model
 fit_lrm <- glm(tum_res ~ 
                   ter_pos + preafp + prehcg + 
                   sqpost + reduc10,
@@ -25,6 +26,9 @@ fit_lrm <- glm(tum_res ~
                x = T,
                y = T
                 )
+
+# Extended model
+fit_lrm_ldh <- update(fit_lrm, . ~ . + lnldhst)
 
 # Discrimination ---------------------
 
@@ -85,7 +89,8 @@ vdata$pred <- predict(fit_lrm,
 
 # ....
 cal_plot <- val.prob(vdata$pred,
-                     vdata$y)
+                     vdata$y,
+                     statloc = FALSE)
 
 
 # Overall performances ---------------------
@@ -124,11 +129,8 @@ score_vdata$Brier$score
 thresholds <- seq(0, 1.0, by = 0.01)
 
 # 2. Calculate observed risk for all patients exceeding threshold (i.e. treat-all)
-survfit_all <- summary(
-  survfit(Surv(ryear, rfs) ~ 1, data = gbsg5), 
-  times = horizon
-)
-f_all <- 1 - survfit_all$surv
+
+f_all <- mean(vdata$y)
 
 # 3. Calculate Net Benefit across all thresholds
 list_nb <- lapply(thresholds, function(ps) {
@@ -137,24 +139,10 @@ list_nb <- lapply(thresholds, function(ps) {
   NB_all <- f_all - (1 - f_all) * (ps / (1 - ps))
   
   # Based on threshold
-  p_exceed <- mean(vdata$pred > ps)
-  survfit_among_exceed <- try(
-    summary(
-      survfit(Surv(ryear, rfs) ~ 1, data = gbsg5[gbsg5$pred > ps, ]), 
-      times = horizon
-    ), silent = TRUE
-  )
-  
-  # If a) no more observations above threshold, or b) among subset exceeding..
-  # ..no indiv has event time >= horizon, then NB = 0
-  if (class(survfit_among_exceed) == "try-error") {
-    NB <- 0
-  } else {
-    f_given_exceed <- 1 - survfit_among_exceed$surv
-    TP <- f_given_exceed * p_exceed
-    FP <- (1 - f_given_exceed) * p_exceed
-    NB <- TP - FP * (ps / (1 - ps))
-  }
+  tdata <- vdata[vdata$pred > ps,] 
+  TP <- sum(tdata$y)
+  FP <- sum(tdata$y == 0)
+  NB <- (TP / nrow(vdata))- (FP / nrow(vdata)) * (ps / (1 - ps))
   
   # Return together
   df_res <- data.frame("threshold" = ps, "NB" = NB, "treat_all" = NB_all)
@@ -164,8 +152,8 @@ list_nb <- lapply(thresholds, function(ps) {
 # Combine into data frame
 df_nb <- do.call(rbind.data.frame, list_nb)
 
-# read off at 23% threshold
-df_nb[df_nb$threshold == 0.23,]
+# Remove NB < 0
+df_nb <- df_nb[df_nb$NB >= 0, ]
 
 # Make basic decision curve plot
 par(
@@ -180,7 +168,7 @@ plot(
   df_nb$NB,
   type = "l", 
   lwd = 2,
-  ylim = c(-0.1, 0.6),
+  ylim = c(-0.1, 0.8),
   xlim = c(0, 1), 
   xlab = "",
   ylab = "Net Benefit",
@@ -198,3 +186,6 @@ legend(
 )
 mtext("Threshold probability", 1, line = 2)
 title("Validation data")
+
+
+# 
