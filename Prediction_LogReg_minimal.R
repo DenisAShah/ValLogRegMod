@@ -109,16 +109,16 @@ plot(lowess(vdata$pred, vdata$y, iter = 0),
      main = "Calibration plot")
 lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
 abline(a = 0, b = 1, col = "gray")
-legend(x = .4, y = .65,
+legend(x = .3, y = .85,
        c("Ideal", "LOWESS", "Logistic"),
        lwd = c(1, 2, 2),
        lty = c(1, 1, 2),
        col = c("gray", "black", "black"),
        bty = "n",
-       seg.len = 1.5,
+       seg.len = .5,
        cex = .60,
+       x.intersp = .5,
        y.intersp = .5 )
-
 
 
 # Overall performances ---------------------
