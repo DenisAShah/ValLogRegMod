@@ -62,8 +62,8 @@ More details about development and validation data are provided in the manuscrip
 ### Descriptive statistics
 
 ```{r, import}
-rsel <- rdata %>% select(-patkey)
-vsel <- vdata %>% select(-patkey)
+rsel <- rdata |> select(-patkey)
+vsel <- vdata |> select(-patkey)
 rsel$dt <- 1
 vsel$dt <- 2
 cdata <- rbind.data.frame(rsel, vsel)
@@ -100,8 +100,8 @@ gtsummary::tbl_summary(
      "{mean} ({sd})",
      "{median} ({min}, {max})"
  )
-) %>%
-  gtsummary::as_kable_extra() %>%
+) |>
+  gtsummary::as_kable_extra() |>
   kableExtra::kable_styling("striped")
 
 ```
@@ -110,7 +110,7 @@ gtsummary::tbl_summary(
 
 ### 1.1 Check non-linearity of continuous predictors
 
-Here we investigate the potential non-linear relation between continuous predictors (i.e. age and size) and the outcomes. We apply three-knot restricted cubic splines using `rms::rcs()` function (details are given in e.g. Frank Harrell's book 'Regression Model Strategies (second edition)', page 27. We assess the potential non-linearity graphically (plotting the two continuous predictors against the log relative hazards (XB or linear predictor) of both event types. Also, we compare the models with and without splines based on the AIC.
+Here we investigate the potential non-linear relation between continuous predictors (i.e. age and size) and the outcomes. We apply three-knot restricted cubic splines using `rms::rcs()` function (details are given in e.g. Frank Harrell's book 'Regression Model Strategies (second edition)', page 27. We assess the potential non-linearity graphically (plotting the two continuous predictors against the log odds (XB or linear predictor) of both event types. Also, we compare the models with and without splines based on the AIC.
 
 <details>
   <summary>Click to expand code</summary>
@@ -235,7 +235,7 @@ dimnames =
     )
   )
 )
-kable(res_AIC, row.names = TRUE) %>%
+kable(res_AIC, row.names = TRUE) |>
   kable_styling("striped", position = "center")
 ```
 
@@ -434,7 +434,7 @@ c_optimism <- round(0.5 *
                       val_opt["Dxy","index.corrected"]), 2)
 
 # val.prob(predict(fit_lrm, type = "fitted.ind"), #as.numeric(rdata$tum_res) - 1, 
-#                      pl = FALSE) %>% round(3)
+#                      pl = FALSE) |> round(3)
 
 # External validation
 val_vdata <- rcorr.cens(
@@ -530,7 +530,7 @@ score_rdata <- Score(
   summary = c("ipa"),
   plots = "calibration"
 )
-plotCalibration(score_rdata)
+
 # Validation data
 score_vdata <- Score(
   list("Validation set" = fit_lrm),
@@ -569,14 +569,14 @@ score_boot <- function(split) {
 }
 
 # Development data
-rboot <- rboot %>% mutate(
+rboot <- rboot |> mutate(
   score = map(splits, score_boot),
   scaled_brier = map_dbl(score, function(x) {
     x$Brier$score[model == "csh_validation"]$IPA
   })
 )
 # Validation data
-vboot <- vboot %>% mutate(
+vboot <- vboot |> mutate(
   score = map(splits, score_boot),
   scaled_brier = map_dbl(score, function(x) {
     x$Brier$score[model == "csh_validation"]$IPA
