@@ -2,7 +2,7 @@
 
 
 # General packages (riskRegression version should be >= 2021.10.10)
-pkgs <- c("riskRegression")
+pkgs <- c("rms", "riskRegression")
 vapply(pkgs, function(pkg) {
   if (!require(pkg, character.only = TRUE)) install.packages(pkg)
   require(pkg, character.only = TRUE, quietly = TRUE)
