@@ -133,6 +133,16 @@ legend(x = .6, y = .65,
        x.intersp = .5,
        y.intersp = .5 )
 
+# Calibration measures ICI, E50, E90
+res_calmeas <-
+  cbind(
+    "ICI" = mean(abs(dt_cal$obs - dt_cal$pred)),
+    "E50" = median(abs(dt_cal$obs - dt_cal$pred)),
+    "E90" = unname(quantile(abs(dt_cal$obs - dt_cal$pred), probs = .90))
+)
+
+res_calmeas
+
 
 # Overall performances ---------------------
 
