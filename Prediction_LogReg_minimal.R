@@ -42,10 +42,23 @@ val_vdata <- rcorr.cens(
   predict(fit_lrm, newdata = vdata), 
   S = vdata$tum_res)
 
-res_discr <- c(
-  "Apparent" = val_rdata[["C Index"]],
-  "External validation" = val_vdata[["C Index"]]
+res_discr <- matrix(c( 
+     val_rdata[["C Index"]],      
+     val_rdata[["C Index"]] - qnorm(.975)*(val_rdata[["S.D."]]/2),
+     val_rdata[["C Index"]] + qnorm(.975)*(val_rdata[["S.D."]]/2),
+     
+     val_vdata[["C Index"]],
+     val_vdata[["C Index"]] - qnorm(.975)*(val_rdata[["S.D."]]/2),
+     val_vdata[["C Index"]] + qnorm(.975)*(val_rdata[["S.D."]]/2)
+    ),
+    nrow = 2, 
+    ncol = 3,
+    byrow = T,
+    dimnames = list(c("Apparent", "Validation"),
+                    c("Estimate", "2.5 %", "97.5 %"))
 )
+
+res_discr
 
 ## Calibration ---------------------------
 
