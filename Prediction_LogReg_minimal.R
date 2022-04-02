@@ -109,7 +109,7 @@ plot(lowess(vdata$pred, vdata$y, iter = 0),
      main = "Calibration plot")
 lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
 abline(a = 0, b = 1, col = "gray")
-legend(x = .3, y = .85,
+legend(x = .6, y = .65,
        c("Ideal", "LOWESS", "Logistic"),
        lwd = c(1, 2, 2),
        lty = c(1, 1, 2),
