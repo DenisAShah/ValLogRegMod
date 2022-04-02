@@ -2,7 +2,7 @@
 
 
 # General packages (riskRegression version should be >= 2021.10.10)
-pkgs <- c("rms", "riskRegression")
+pkgs <- c("riskRegression")
 vapply(pkgs, function(pkg) {
   if (!require(pkg, character.only = TRUE)) install.packages(pkg)
   require(pkg, character.only = TRUE, quietly = TRUE)
@@ -87,10 +87,38 @@ vdata$pred <- predict(fit_lrm,
                       newdata = vdata,
                       type = "response")
 
-# ....
-cal_plot <- val.prob(vdata$pred,
-                     vdata$y,
-                     statloc = FALSE)
+# Calibration based on a secondary logistic regression
+fit_cal <- glm(y ~ pred,
+               family = binomial,
+               data = vdata)
+
+dt_cal <- cbind.data.frame("obs" = predict(fit_cal, 
+                                           type = "response"),
+                           "pred" = vdata$pred)
+dt_cal <- dt_cal[order(dt_cal$pred),]
+
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(lowess(vdata$pred, vdata$y, iter = 0),
+     type = "l",
+     xlim = c(0, 1),
+     ylim = c(0, 1),
+     xlab = "Predicted probability",
+     ylab = "Actual probability",
+     bty = "n",
+     lwd = 2,
+     main = "Calibration plot")
+lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
+abline(a = 0, b = 1, col = "gray")
+legend(x = .4, y = .65,
+       c("Ideal", "LOWESS", "Logistic"),
+       lwd = c(1, 2, 2),
+       lty = c(1, 1, 2),
+       col = c("gray", "black", "black"),
+       bty = "n",
+       seg.len = 1.5,
+       cex = .60,
+       y.intersp = .5 )
+
 
 
 # Overall performances ---------------------
