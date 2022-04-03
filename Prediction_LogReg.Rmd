@@ -490,7 +490,127 @@ res_discr <-
 ```
 
 Comments discrimination
+### 2.2 Calibration
+Describe calibration
 
+##### 2.2.1 Mean calibration
+
+<details>
+  <summary>Click to expand code</summary>
+```{r, mean_cal, fig.align='center',echo=TRUE, eval=FALSE}
+# Models
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
+# Calibration-in-the-large
+lp <- predict(fit_lrm, newdata = vdata)
+vdata$y <- as.numeric(vdata$tum_res) - 1 # convert outcome to numeric
+cal_intercept <- glm(y  ~ offset(lp), 
+                     family = binomial,
+                     data = vdata)
+intercept_CI <- confint(cal_intercept) # confidence intervals
+
+
+Obs <- sum(vdata$y)
+vdata$pred <- predict(fit_lrm, 
+                      newdata = vdata,
+                      type = "fitted.ind")
+Expct <- sum(vdata$pred)
+
+Obs/Expct
+```
+</details>
+
+##### 2.2.2 Weak calibration
+<details>
+  <summary>Click to expand code</summary>
+```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE}
+# Models
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
+# Calibration slope
+cal_slope <- glm(y  ~ lp,
+                 family = binomial,
+                 data = vdata)
+slope_CI <- confint(cal_slope) # Confidence interval
+```
+</details>
+
+
+##### 2.2.3 Moderate calibration
+
+<details>
+  <summary>Click to expand code</summary>
+```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE}
+# Models
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
+## Calibration plot
+vdata$pred <- predict(fit_lrm,
+                      newdata = vdata,
+                      type = "fitted.ind")
+
+# Calibration based on a secondary logistic regression
+fit_cal <- lrm(y ~ pred,
+               x = T,
+               y = T,
+               data = vdata)
+
+dt_cal <- cbind.data.frame("obs" = predict(fit_cal, 
+                                           type = "fitted.ind"),
+                           "pred" = vdata$pred)
+dt_cal <- dt_cal[order(dt_cal$pred),]
+
+cal_lowess <- lowess(vdata$pred, vdata$y, iter = 0)
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(cal_lowess,
+     type = "l",
+     xlim = c(0, 1),
+     ylim = c(0, 1),
+     xlab = "Predicted probability",
+     ylab = "Actual probability",
+     bty = "n",
+     lwd = 2,
+     main = "Calibration plot")
+lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
+abline(a = 0, b = 1, col = "gray")
+legend("bottomright",
+       c("Ideal", "Lowess", "Logistic"),
+       lwd = c(1, 2, 2),
+       lty = c(1, 1, 2),
+       col = c("gray", "black", "black"),
+       bty = "n")
+
+# Calibration measures ICI, E50, E90 based on secondary logistic regression
+res_calmeas <-
+  cbind(
+    "ICI" = mean(abs(dt_cal$obs - dt_cal$pred)),
+    "E50" = median(abs(dt_cal$obs - dt_cal$pred)),
+    "E90" = unname(quantile(abs(dt_cal$obs - dt_cal$pred), probs = .90))
+)
+
+res_calmeas
+
+
+```
+</details>
 
 ### 2.3 Overall prediction error
 
