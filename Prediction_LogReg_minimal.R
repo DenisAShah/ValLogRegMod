@@ -105,8 +105,19 @@ fit_cal <- glm(y ~ pred,
                family = binomial,
                data = vdata)
 
-dt_cal <- cbind.data.frame("obs" = predict(fit_cal, 
-                                           type = "response"),
+cal_obs <- predict(fit_cal, 
+                   type = "response",
+                   se.fit =  TRUE)
+alpha <- .05
+dt_cal <- cbind.data.frame("obs" = cal_obs$fit,
+                           
+                           "lower" = 
+                             cal_obs$fit - 
+                             qnorm(1 - alpha / 2)*cal_obs$se.fit,
+                           
+                           "upper" = cal_obs$fit + 
+                             qnorm(1 - alpha / 2)*cal_obs$se.fit,
+                           
                            "pred" = vdata$pred)
 dt_cal <- dt_cal[order(dt_cal$pred),]
 
@@ -121,19 +132,21 @@ plot(lowess(vdata$pred, vdata$y, iter = 0),
      lwd = 2,
      main = "Calibration plot")
 lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
+lines(dt_cal$pred, dt_cal$lower, lwd = 2, lty = 3)
+lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
 abline(a = 0, b = 1, col = "gray")
 legend(x = .6, y = .65,
-       c("Ideal", "LOWESS", "Logistic"),
-       lwd = c(1, 2, 2),
-       lty = c(1, 1, 2),
-       col = c("gray", "black", "black"),
+       c("Ideal", "Lowess", "Logistic", "95% confidence interval"),
+       lwd = c(1, 2, 2, 2),
+       lty = c(1, 1, 2, 3),
+       col = c("gray", "black", "black", "black"),
        bty = "n",
        seg.len = .5,
        cex = .60,
        x.intersp = .5,
        y.intersp = .5 )
 
-# Calibration measures ICI, E50, E90
+# Calibration measures ICI, E50, E90 based on secondary logistic regression
 res_calmeas <-
   cbind(
     "ICI" = mean(abs(dt_cal$obs - dt_cal$pred)),
