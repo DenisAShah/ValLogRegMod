@@ -37,7 +37,7 @@ library(pacman)
 pacman::p_load(
   rio,
   rms,
-  pec,
+  riskRegression,
   plotrix,
   knitr,
   splines,
@@ -384,9 +384,6 @@ We here calculate:
 
 More details are in ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010);
 
-+ Royston-Sauerbrei D statistic and R<sup>2</sup><sub>D</sub> as a measure of prognostic separation;  
-
-  
 #### 2.2.1 C-statistic 
 
 <details>
@@ -408,24 +405,10 @@ options(datadist = NULL)
 val_rdata <- rcorr.cens(predict(fit_lrm), 
                         S = rdata$tum_res)
 
-# NOTE: This function needs to be commented
-c_function <- function(x, k = 3) {
-  se <- x["S.D."]/2
-  Lower95 <- x["C Index"] - 1.96*se
-  Upper95 <- x["C Index"] + 1.96*se
-  round(cbind(
-    "C-statistic" = x["C Index"],
-    Lower95, 
-    Upper95), k)
-}
+# Load function to calculate confidence intervals of c-statistic
+source(here::here('Functions/c_stat_ci.R'))
+c_dev <- c_stat_ci(val_rdata)
 
-c_dev <- c_function(val_rdata)
-
-# Alternative:
-# val_opt <- validate(fit = fit_lrm, B = 500)
-# c_apparent <- round(0.5 * 
-#                       (1 +
-#                       val_rdata["Dxy","index.orig"]), 2) 
 
 # Internal validation (bootstrapping)
 val_opt <- validate(fit = fit_lrm, B = 500)
@@ -433,28 +416,18 @@ c_optimism <- round(0.5 *
                       (1 +
                       val_opt["Dxy","index.corrected"]), 2)
 
-# val.prob(predict(fit_lrm, type = "fitted.ind"), #as.numeric(rdata$tum_res) - 1, 
-#                      pl = FALSE) |> round(3)
-
 # External validation
 val_vdata <- rcorr.cens(
   predict(fit_lrm, newdata = vdata), 
   S = vdata$tum_res)
 
-c_val <- c_function(val_vdata)
+c_val <- c_stat_ci(val_vdata)
 
 res_c <- rbind(c_dev, c_val)
 
-# NOTE: This function needs to be commented
-discr_slope <- function(fit, y, new_data, k = 3) {
-  pred <- predict(fit, 
-                  newdata = new_data, 
-                  type = "fitted.ind")
-  mean_group <- tapply(pred, y, mean)
-  dslope <- round(abs(mean_group[1] - mean_group[2]), k)
-  names(dslope) <- "Discrimination slope"
-  return(dslope)
-}
+# Discrimination slope
+# Load function to calculate discrimination slope
+source(here::here('Functions/discr_slope.R'))
 dslope_rdata <- discr_slope(fit_lrm,
                             y = rdata$tum_res,
                             new_data = rdata)
@@ -484,8 +457,102 @@ vboot <- vboot |>
 ```{r, res_disc, fig.align='center',echo=FALSE}
 alpha <- .05
 k <- 2
-
-res_discr <-
+res_C <- matrix(c(
+  c_dev,
+  
+  c_optimism,
+  NA,
+  NA,
+  
+  c_val,
+  
+  dslope_rdata,
+  quantile(rboot$dslope, probs = .025),
+  quantile(rboot$dslope, probs = .975),
+  
+  dslope_vdata,
+  quantile(vboot$dslope, probs = .025),
+  quantile(vboot$dslope, probs = .975)
+  
+  int_val["Harrell C corrected"],
+  NA,
+  NA,
+  
+  harrell_C_rott5_pgr$concordance,
+  harrell_C_rott5_pgr$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5_pgr$var) ,
+  harrell_C_rott5_pgr$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5_pgr$var),
+  
+  int_val_pgr["Harrell C corrected"],
+  NA,
+  NA,
+  
+  harrell_C_gbsg5$concordance,
+  harrell_C_gbsg5$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5$var) ,
+  harrell_C_gbsg5$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5$var),
+  
+  harrell_C_gbsg5_pgr$concordance,
+  harrell_C_gbsg5_pgr$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5_pgr$var) ,
+  harrell_C_gbsg5_pgr$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5_pgr$var),
+  
+  Uno_C_rott5$concordance,
+  harrell_C_rott5$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5$var) ,
+  harrell_C_rott5$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5$var),
+  
+  int_val["Harrell C corrected"],
+  NA,
+  NA,
+  
+  Uno_C_rott5_pgr$concordance,
+  Uno_C_rott5_pgr$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_rott5_pgr$var) ,
+  Uno_C_rott5_pgr$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_rott5_pgr$var),
+  
+  int_val_pgr["Uno C corrected"],
+  NA,
+  NA,
+  
+ 
+  Uno_C_gbsg5$concordance,
+  Uno_C_gbsg5$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5$var) ,
+  Uno_C_gbsg5$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5$var),
+  
+  Uno_C_gbsg5_pgr$concordance,
+  Uno_C_gbsg5_pgr$concordance - 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5_pgr$var) ,
+  Uno_C_gbsg5_pgr$concordance + 
+    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5_pgr$var)
+),
+  
+  nrow = 2,
+  ncol = 18,
+  byrow = T,
+  
+  dimnames = list(
+    c("Harrell C", "Uno C"),
+    rep(c("Estimate", "Lower .95 ", "Upper .95"), 6)
+  )
+)
+res_C <- round(res_C, 2) # Digits
+kable(res_C) |>
+  kable_styling("striped", position = "center") |>
+  add_header_above(c(" " = 1, 
+                     "Apparent" = 3, 
+                     "Internal" = 3, 
+                     "Apparent + PGR" = 3, 
+                     "Internal + PGR" = 3, 
+                     "External" = 3, 
+                     "External + PGR" = 3))
 
 ```
 
