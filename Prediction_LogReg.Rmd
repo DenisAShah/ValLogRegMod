@@ -451,6 +451,17 @@ rboot <- rboot |>
 vboot <- vboot |>
   mutate(dslope = map_dbl(splits, discr_slope_boot))
 
+# Optimism-corrected discrimination slope
+source(here::here("Functions/internal_cv_lrm.R"))
+
+optim_measures <- bootstrap_cv_lrm(
+  db = rdata, 
+  outcome = "tum_res", 
+  formula = "tum_res ~ 
+                  ter_pos + preafp + prehcg + 
+                  sqpost + reduc10", 
+  formula_score = "tum_res ~ 1")
+
 ```
 </details>
 
