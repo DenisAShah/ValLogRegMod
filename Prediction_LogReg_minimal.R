@@ -157,6 +157,8 @@ res_calmeas <-
 
 res_calmeas
 
+# NOTE: Calibration measures as ICI, E50, and E90 might be also estimated
+# using lowess estimation 
 
 # Overall performances ---------------------
 
