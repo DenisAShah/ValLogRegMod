@@ -1,11 +1,9 @@
-#' Calculate optimism-corrected bootstrap internal validation for AUC, Brier and Scaled Brier Score
+#' Calculate optimism-corrected bootstrap internal validation for discrimation slope, Brier and Scaled Brier Score
 #' @param db data to calculate the optimism-corrected bootstrap
 #' @param B number of bootstrap sample (default 10)
-#' @param time follow-up time
-#' @param status indicator variable (0=censored, 1=event)
-#' @param formula_model formula for the model (Cox model)
-#' @param pred.time time horizon as predictor
-#' @param formula_ipcw formula to calculate inverse probability censoring weighting
+#' @param outcome outcome variable (e.g., 0 = control, 1 = case) 
+#' @param formula_model formula for the model (rms:lrm model)
+#' @param formula_score formula to identify outcome in riskRegression::Score() function (e.g., y ~ 1)
 #'
 #' @return
 #'
@@ -13,40 +11,31 @@
 #'
 #' @examples
 
-# Use pacman to check whether packages are installed, if not load
-if (!require("pacman")) install.packages("pacman")
-library(pacman)
+# General packages (riskRegression version should be >= 2021.10.10)
+pkgs <- c("rms", "riskRegression", "tidyverse")
+vapply(pkgs, function(pkg) {
+  if (!require(pkg, character.only = TRUE)) install.packages(pkg)
+  require(pkg, character.only = TRUE, quietly = TRUE)
+}, FUN.VALUE = logical(length = 1L))
 
-pacman::p_load(
-  rio,
-  survival,
-  rms,
-  pec,
-  tidyverse,
-  timeROC,
-  riskRegression
-)
-
-
-bootstrap_cv_lrm <- function(db, B = 10,
-							 time,
-							 status,
-							 formula_model,
-							 pred.time,
-							 formula_ipcw) {
-							 
+bootstrap_cv_lrm <- function(db, 
+                             B = 10,
+                             outcome,
+                             formula_model,
+                             formula_score) {
+  
   frm_model <- as.formula(formula_model)
-  frm_ipcw <- as.formula(formula_ipcw)
+  frm_score <- as.formula(formula_score)
   db$id <- 1:nrow(db)
   
   
   # Duplicate data
-  db_ext <- db %>% slice(rep(row_number(), B))
+  db_ext <- db |> slice(rep(row_number(), B))
   db_ext$.rep <- with(db_ext, ave(seq_along(id), id, FUN = seq_along)) # add an index identifying the replications
   
-  db_tbl <- db_ext %>%
-    group_by(.rep) %>%
-    nest() %>%
+  db_tbl <- db_ext |>
+    group_by(.rep) |>
+    nest() |>
     rename(
       orig_data = data,
       id_boot = .rep
@@ -62,19 +51,19 @@ bootstrap_cv_lrm <- function(db, B = 10,
     sample_row <- unlist(sample_row)
     db_boot <- db[sample_row, ]
     db_boot$id_boot <- sort(rep(1:B, nrow(db)))
-    db_boot <- db_boot %>%
-      group_by(id_boot) %>%
-      nest() %>%
+    db_boot <- db_boot |>
+      group_by(id_boot) |>
+      nest() |>
       rename(boot_data = data)
     return(db_boot)
   }
   
   # Join original data and the bootstrap data in a nested tibble
   a <- sample_boot(db, B)
-  b <- a %>% left_join(db_tbl)
+  b <- a |> left_join(db_tbl)
   
   # Create optimism-corrected performance measures
-  b <- b %>% mutate(
+  b <- b |> mutate(
     lrm_boot = map(
       boot_data,
       ~ lrm(frm_model, data = ., x = T, y = T)
@@ -84,78 +73,106 @@ bootstrap_cv_lrm <- function(db, B = 10,
       orig_data,
       ~ lrm(frm_model, data = ., x = T, y = T)
     ),
-	
-	dslope_app = 
-			
     
-    Harrell_C_app =
-      map2_dbl(
-        orig_data, cox_apparent,
-        ~ concordance(Surv(.x[[time]], .x[[status]]) 
-                      ~ predict(.y, newdata = .x),
-                      reverse = TRUE)$concordance
+    # Discrimination slope
+    dslope_app = map2_dbl(
+      orig_data, lrm_apparent,
+      function(.x, .y, new_data = .x, k = 3){
+        pred <- predict(.y, 
+                        newdata = as.data.frame(.x), 
+                        type = "fitted.ind")
+        
+        mean_group <- tapply(pred, .x[outcome], mean)
+        
+        dslope <- round(abs(mean_group[1] - mean_group[2]), k)
+        
+        names(dslope) <- "Discrimination slope"
+        
+        return(dslope)
+      }),
+      
+      
+      dslope_orig = map2_dbl(
+        orig_data, lrm_boot,
+        
+        function(.x, .y, new_data = .x, k = 3){
+          
+          pred <- predict(.y, 
+                          newdata = as.data.frame(.x), 
+                          type = "fitted.ind")
+          
+          mean_group <- tapply(pred, .x[outcome], mean)
+          
+          dslope <- round(abs(mean_group[1] - mean_group[2]), k)
+          
+          names(dslope) <- "Discrimination slope"
+          
+          return(dslope)
+        }
+        
       ),
+      
+      dslope_boot =
+        map2_dbl(
+          boot_data, lrm_boot,
+          
+          function(.x, .y, new_data = .x, k = 3){
+            
+            pred <- predict(.y, 
+                            newdata = as.data.frame(.x), 
+                            type = "fitted.ind")
+            
+            mean_group <- tapply(pred, .x[outcome], mean)
+            
+            dslope <- round(abs(mean_group[1] - mean_group[2]), k)
+            
+            names(dslope) <- "Discrimination slope"
+            return(dslope)
+          }),
+          
+      dslope_diff = map2_dbl(
+          dslope_boot, dslope_orig,
+          function(a, b) {
+              a - b
+            }
+          ),
     
-    Harrell_C_orig =
-      map2_dbl(
-        orig_data, cox_boot,
-        ~ concordance(Surv(.x[[time]], .x[[status]]) 
-                      ~ predict(.y, newdata = .x),
-                      reverse = TRUE)$concordance
-      ),
-    
-    Harrell_C_boot =
-      map2_dbl(
-        boot_data, cox_boot,
-        ~ concordance(Surv(.x[[time]],.x[[status]]) 
-                      ~ predict(.y, newdata = .x),
-                      reverse = TRUE)$concordance
-      ),
-    
-    Harrell_C_diff = map2_dbl(
-      Harrell_C_boot, Harrell_C_orig,
-      function(a, b) {
-        a - b
-      }
-    ),
-    
-    
+    # Brier score
     
     Score_app = map2(
-      orig_data, cox_apparent,
-      ~ Score(list("Cox" = .y),
-              formula = frm_ipcw,
-              data = .x, times = pred.time,
-              cens.model = "km",
+      orig_data, lrm_apparent,
+      ~ Score(list("Logistic" = .y),
+              formula = frm_score,
+              data = .x, 
               metrics = "brier",
               summary = "ipa"
-      )$Brier[[1]]
+      )$Brier$score
     ),
     
     Brier_app = map_dbl(Score_app, ~ .x$Brier[[2]]),
     IPA_app = map_dbl(Score_app, ~ .x$IPA[[2]]),
+    
     Score_orig = map2(
-      orig_data, cox_boot,
-      ~ Score(list("Cox" = .y),
-              formula = frm_ipcw,
-              data = .x, times = pred.time,
-              cens.model = "km",
+      orig_data, lrm_boot,
+      ~ Score(list("Logistic" = .y),
+              formula = frm_score,
+              data = .x, 
               metrics = "brier",
               summary = "ipa"
-      )$Brier[[1]]
+      )$Brier$score
     ),
     
     Brier_orig = map_dbl(Score_orig, ~ .x$Brier[[2]]),
     IPA_orig = map_dbl(Score_orig, ~ .x$IPA[[2]]),
+    
     Score_boot = map2(
-      boot_data, cox_boot,
-      ~ Score(list("Cox" = .y),
-              formula = frm_ipcw,
-              data = .x, times = pred.time,
-              cens.model = "km",
+      boot_data, lrm_boot,
+      ~ Score(list("Logistic" = .y),
+              formula = frm_score,
+              data = .x, 
               metrics = "brier",
               summary = "ipa"
-      )$Brier[[1]]
+      )$Brier$score
     ),
     
     Brier_boot = map_dbl(Score_boot, ~ .x$Brier[[2]]),
@@ -178,11 +195,12 @@ bootstrap_cv_lrm <- function(db, B = 10,
   # Generate output
   Brier_corrected <- b$Brier_app[1] - mean(b$Brier_diff)
   IPA_corrected <- b$IPA_app[1] - mean(b$IPA_diff)
-  Harrell_C_corrected <- b$Harrell_C_app[1] - mean(b$Harrell_C_diff)
-  Uno_C_corrected <- b$Uno_C_app[1] - mean(b$Uno_C_diff)
-  res <- c("" = 
+  dslope_corrected <- b$dslope_app[1] - mean(b$dslope_diff)
+  
+  res <- c("Discrimination slope corrected" = dslope_corrected,
            "Brier corrected" = Brier_corrected, 
-           "IPA corrected" = IPA_corrected, 
-)
+           "IPA corrected" = IPA_corrected 
+  )
   return(res)
 }
+
