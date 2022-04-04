@@ -65,6 +65,7 @@ res_discr
 # Calibration-in-the-large
 lp <- predict(fit_lrm, newdata = vdata)
 vdata$y <- as.numeric(vdata$tum_res) - 1 # convert outcome to numeric
+rdata$y <- as.numeric(rdata$tum_res) - 1 # for the development set (useful for clinical utility)
 cal_intercept <- glm(y  ~ offset(lp), 
                      family = binomial,
                      data = vdata)
@@ -252,4 +253,10 @@ mtext("Threshold probability", 1, line = 2)
 title("Validation data")
 
 
-# 
+# NOTES ---------------------------
+# 1. To run the clinical utility of the development data find "vdata" and replace with "rdata"
+# from paragraph "Discrimination" on. 
+# 2. To run the model with the LDH as additional biomarker
+# find "fit_lrm" and replace with with "fit_lrm_ldh"
+
+# When use apparent validation, be careful to use the correct labels in the plot!
