@@ -468,7 +468,7 @@ optim_measures <- bootstrap_cv_lrm(
 ```{r, res_disc, fig.align='center',echo=FALSE}
 alpha <- .05
 k <- 2
-res_C <- matrix(c(
+res_discr <- matrix(c(
   c_dev,
   
   c_optimism,
@@ -478,92 +478,34 @@ res_C <- matrix(c(
   c_val,
   
   dslope_rdata,
-  quantile(rboot$dslope, probs = .025),
-  quantile(rboot$dslope, probs = .975),
+  quantile(rboot$dslope, probs = alpha / 2),
+  quantile(rboot$dslope, probs = 1 - alpha / 2),
+  
+  optim_measures["Discrimination slope corrected"],
+  NA,
+  NA,
   
   dslope_vdata,
-  quantile(vboot$dslope, probs = .025),
-  quantile(vboot$dslope, probs = .975)
-  
-  int_val["Harrell C corrected"],
-  NA,
-  NA,
-  
-  harrell_C_rott5_pgr$concordance,
-  harrell_C_rott5_pgr$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5_pgr$var) ,
-  harrell_C_rott5_pgr$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5_pgr$var),
-  
-  int_val_pgr["Harrell C corrected"],
-  NA,
-  NA,
-  
-  harrell_C_gbsg5$concordance,
-  harrell_C_gbsg5$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5$var) ,
-  harrell_C_gbsg5$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5$var),
-  
-  harrell_C_gbsg5_pgr$concordance,
-  harrell_C_gbsg5_pgr$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5_pgr$var) ,
-  harrell_C_gbsg5_pgr$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_gbsg5_pgr$var),
-  
-  Uno_C_rott5$concordance,
-  harrell_C_rott5$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5$var) ,
-  harrell_C_rott5$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(harrell_C_rott5$var),
-  
-  int_val["Harrell C corrected"],
-  NA,
-  NA,
-  
-  Uno_C_rott5_pgr$concordance,
-  Uno_C_rott5_pgr$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_rott5_pgr$var) ,
-  Uno_C_rott5_pgr$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_rott5_pgr$var),
-  
-  int_val_pgr["Uno C corrected"],
-  NA,
-  NA,
-  
+  quantile(vboot$dslope, probs = alpha / 2),
+  quantile(vboot$dslope, probs = 1 - alpha /2)
+  ),
  
-  Uno_C_gbsg5$concordance,
-  Uno_C_gbsg5$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5$var) ,
-  Uno_C_gbsg5$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5$var),
-  
-  Uno_C_gbsg5_pgr$concordance,
-  Uno_C_gbsg5_pgr$concordance - 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5_pgr$var) ,
-  Uno_C_gbsg5_pgr$concordance + 
-    qnorm(1 - alpha / 2) * sqrt(Uno_C_gbsg5_pgr$var)
-),
-  
   nrow = 2,
-  ncol = 18,
+  ncol = 9,
   byrow = T,
   
   dimnames = list(
-    c("Harrell C", "Uno C"),
-    rep(c("Estimate", "Lower .95 ", "Upper .95"), 6)
+    c("C-statistic", "Discrimination slope"),
+    rep(c("Estimate", "Lower .95 ", "Upper .95"), 3)
   )
 )
-res_C <- round(res_C, 2) # Digits
-kable(res_C) |>
+res_discr <- round(res_discr, 2) # Digits
+kable(res_discr) |>
   kable_styling("striped", position = "center") |>
   add_header_above(c(" " = 1, 
                      "Apparent" = 3, 
                      "Internal" = 3, 
-                     "Apparent + PGR" = 3, 
-                     "Internal + PGR" = 3, 
-                     "External" = 3, 
-                     "External + PGR" = 3))
+                     "External" = 3))
 
 ```
 
@@ -683,7 +625,8 @@ lines(dt_cal$pred, dt_cal$lower, lwd = 2, lty = 3)
 lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
 abline(a = 0, b = 1, col = "gray")
 legend("bottomright",
-       c("Ideal", "Lowess", "Logistic", "95% confidence interval"),
+       c("Ideal", "Non - parametricLowess", 
+         "Logistic", "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
