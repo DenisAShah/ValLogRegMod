@@ -56,7 +56,11 @@ vdata <- readRDS(here::here("Data/vdata.rds"))
 
 ```
 
-We loaded the development data (rdata) and the validation data (vdata).
+We first consider a data set with 544 patients to develop a prediction model that includes 5 predictors (rdata).  In a later study, we externally validated the 5 predictor model in 273 patients from a tertiary referral center (vdata). We illustrate ways to assess the usefulness of a model in a new setting.  
+We then extend the developed model with the pre-chemotherapy level of the tumor marker lactate dehydrogenase (LDH). Since the validation data (vdata) did not have information about LDH, we assess the prediction performances of the basic model in the development (rdata) and in the validation data (vdata). 
+
+Thus, we loaded the development data (rdata) and the validation data (vdata).  
+
 More details about development and validation data are provided in the manuscript ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010).
 
 ### Descriptive statistics
@@ -508,8 +512,10 @@ kable(res_discr) |>
                      "External" = 3))
 
 ```
+C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78 (95% CI: 0.73-0.84) in the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a C-statistic of 0.81.  
 
-Comments discrimination
+Discrimination slope was 0.30 (95% CI: 0.27-0.32), and 0.24 (95% CI: 0.17-0.29) for the development and validation data, respectively.
+
 ### 2.2 Calibration
 Describe calibration
 
@@ -535,7 +541,7 @@ cal_intercept <- glm(y  ~ offset(lp),
                      data = vdata)
 intercept_CI <- confint(cal_intercept) # confidence intervals
 
-
+# Observed/Expected ratio
 Obs <- sum(vdata$y)
 vdata$pred <- predict(fit_lrm, 
                       newdata = vdata,
