@@ -517,9 +517,19 @@ C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78 (95% CI:
 Discrimination slope was 0.30 (95% CI: 0.27-0.32), and 0.24 (95% CI: 0.17-0.29) for the development and validation data, respectively.
 
 ### 2.2 Calibration
-Describe calibration
+Calibration refers to the agreement between observed outcomes and predictions. For example, if we predict a 20% risk of residual tumor for a testicular cancer patient, the observed frequency of tumor should be approximately 20 out of 100 patients with such a prediction.
 
-##### 2.2.1 Mean calibration
+Different level of calibration can be estimated: mean, weak, and moderate calibration.
+
+#### 2.2.1 Mean calibration
+Mean calibration refers how systematically the model might under- or over- predicts the actual risk.   
+
+The mean calibration can be estimated:  
+
++ using the Observed and Expected ratio. The observed number of events is the sum of the events (or cases) present in the data. The expected is estimated summing the predicted probability of the event estimated by the model. Ratio equals to 1 indicates perfect (mean) calibration, values lower or greater than 1 indicate over- and under- prediction, respectively.
+
++ calibration intercept (or calibration-in-the-large): indicates the extent that predictions are systematically too low or too high.  
+
 
 <details>
   <summary>Click to expand code</summary>
@@ -548,11 +558,47 @@ vdata$pred <- predict(fit_lrm,
                       type = "fitted.ind")
 Expct <- sum(vdata$pred)
 
-Obs/Expct
+OE <- Obs / Expct
+
 ```
 </details>
 
+```{r, res_mean_cal, fig.align='center',echo=FALSE}
+alpha <- .05
+k <- 2
+res_mean_cal <- matrix(c(
+    cal_intercept$coefficients,
+    
+    intercept_CI[1],
+    intercept_CI[2],
+    
+    OE,
+
+    OE*exp(-qnorm(1 - alpha / 2) * sqrt(1 / Obs)),
+    OE*exp(qnorm(1 - alpha / 2) * sqrt(1 / Obs))
+),
+  nrow = 2,
+  ncol = 3, 
+  byrow = T,
+  dimnames = list(
+    c("Calibration intercept", "O/E ratio"),
+    c("Estimate", "Lower .95 ", "Upper .95"))
+)
+
+res_mean_cal <- round(res_mean_cal, 2) # Digits
+kable(res_mean_cal) |>
+  kable_styling("striped", position = "center") 
+
+```
+Both calibration intercept and O/E ratio showed good mean calibration.
+The prediction model did not systematically over or underestimate the actual risk. 
+
 ##### 2.2.2 Weak calibration
+The term ‘weak’ refers to the limited flexibility in assessing calibration. We are essentially summarizing calibration of the observed proportions of outcomes versus predicted probabilities using only two parameters i.e. a straight line. In other words, perfect weak
+calibration is defined as mean calibration ratio and calibration slope of unity(or calibration intercept equals to zero). 
+The calibration slope indicates the overall strength of the linear predictor (LP), which can be interpreted as the level of overfitting
+(slope <1) or underfitting (slope>1). A value of slope smaller than 1 can also be interpreted as reflecting a need for shrinkage of regression coefficients in a prediction model. 
+
 <details>
   <summary>Click to expand code</summary>
 ```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE}
@@ -566,6 +612,7 @@ fit_lrm <- lrm(tum_res ~
 options(datadist = NULL)
 
 # Calibration slope
+vdata$lp <- predict(fit_lrm, newdata = vdata)
 cal_slope <- glm(y  ~ lp,
                  family = binomial,
                  data = vdata)
@@ -573,8 +620,23 @@ slope_CI <- confint(cal_slope) # Confidence interval
 ```
 </details>
 
+```{r, res_weak_cal, fig.align='center',echo=FALSE}
+k <- 2
+res_weak_cal <- cbind(
+  "Estimate" = cal_slope$coefficients[2],
+  "Lower .95" = slope_CI[1],
+  "Upper .95" = slope_CI[2]
+)
+rownames(res_weak_cal) <- "Calibration slope"
+
+res_weak_cal <- round(res_weak_cal, 2) # Digits
+kable(res_weak_cal) |>
+  kable_styling("striped", position = "center") 
+```
 
 ##### 2.2.3 Moderate calibration
+Moderate calibration concerns whether among patients with the same predicted risk, the observed event rate equals the predicted risk. A graphical assessment of calibration is possible with predictions on the x-axis, and the outcome on the y-axis. Perfect predictions should be on the 45° line.  For binary outcomes, the plot contains only 0 and 1 values for the y-axis. Smoothing techniques can be used to estimate
+the observed probabilities of the outcome (p(y=1)) in relation to the predicted probabilities, e.g. using the lowess algorithm. The observed probabilities can be also estimated using a secondary logistic regression model using the predicted probability as predictor modelled with splines. We may however expect that the specific type of smoothing may affect the graphical impression, especially in smaller data sets.
 
 <details>
   <summary>Click to expand code</summary>
@@ -589,6 +651,7 @@ fit_lrm <- lrm(tum_res ~
 options(datadist = NULL)
 
 ## Calibration plot
+vdata$y <- as.numeric(vdata$tum_res) - 1
 vdata$pred <- predict(fit_lrm,
                       newdata = vdata,
                       type = "fitted.ind")
@@ -598,6 +661,8 @@ fit_cal <- glm(y ~ pred,
                x = T,
                y = T,
                data = vdata)
+# NOTE: we can also model using splines (e.g. y ~ rcs(pred, 5),
+# restricted cubic splies with five knots
 
 cal_obs <- predict(fit_cal,  
                    type = "response",
@@ -632,7 +697,8 @@ lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
 abline(a = 0, b = 1, col = "gray")
 legend("bottomright",
        c("Ideal", "Non - parametricLowess", 
-         "Logistic", "95% confidence interval"),
+         "Logistic",
+         "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
@@ -646,8 +712,64 @@ res_calmeas <-
     "E90" = unname(quantile(abs(dt_cal$obs - dt_cal$pred), probs = .90))
 )
 
-res_calmeas
+## Bootstrap confidence intervals
+## for the calibration  measures (ICI, E50, E90) ------
+alpha <- .05
+B <- 2000 # Set B = 2000 although it takes more time
+set.seed(2022)
+vboot <- bootstraps(vdata, times = B)
 
+# Bootstrap calibration measures
+numsum_boot <- function(split) {
+  
+  pred <- predict(fit_lrm,
+                  type = "fitted.ind",
+                  newdata = analysis(split))
+
+ 
+# Estimate actual risk - basic model
+  vcal <- glm(y ~ pred,
+              x = T,
+              y = T,
+              data = analysis(split)
+) 
+ return(vcal) 
+}
+ 
+cal_obs_boot <- predict(vcal, 
+                        type = "response",
+                        se.fit = TRUE,
+                        newdata = analysis(split))
+ # Save objects needed
+db_cal_boot <- data.frame(
+  "obs" = cal_obs_boot$fit,
+  
+  "lower" = cal_obs_boot$fit - 
+    qnorm(1 - alpha / 2)*cal_obs_boot$se.fit,
+                           
+  "upper" = cal_obs_boot$fit +  
+    qnorm(1 - alpha / 2)*cal_obs_boot$se.fit,
+                      
+  "pred" = pred
+)
+
+absdiff_boot <- abs(db_cal_boot$obs - db_cal_boot$pred)
+
+res_cal_boot <- data.frame(
+  "ICI" = mean(absdiff_boot),
+  "E50" = quantile(absdiff_boot, probs = .5),
+  "E90" = quantile(absdiff_boot, probs = .9)
+)
+}
+numsum_b <- vboot |>
+  mutate(num_cal_boot = map(splits, numsum_boot),
+         
+         ICI = map_dbl(num_cal_boot, ~ .x$ICI),
+         
+         E50 = map_dbl(num_cal_boot, ~ .x$E50),
+         
+         E90 = map_dbl(num_cal_boot, ~ .x$E90)
+         )
 
 ```
 </details>
