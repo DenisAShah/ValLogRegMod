@@ -392,7 +392,7 @@ More details are in ["Assessing the performance of prediction models: a framewor
 
 <details>
   <summary>Click to expand code</summary>
-```{r, discrimination,warning=FALSE,message=FALSE,echo=TRUE}
+```{r, discrimination, warning=FALSE, message=FALSE, echo=TRUE}
 
 # Models
 dd <- datadist(rdata, adjto.cat = "first")
@@ -468,6 +468,8 @@ optim_measures <- bootstrap_cv_lrm(
 
 ```
 </details>
+```{r, discrimination, fig.align='center', warning=FALSE, eval=TRUE}
+```
 
 ```{r, res_disc, fig.align='center',echo=FALSE}
 alpha <- .05
@@ -563,6 +565,9 @@ OE <- Obs / Expct
 ```
 </details>
 
+```{r, mean_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```
+
 ```{r, res_mean_cal, fig.align='center',echo=FALSE}
 alpha <- .05
 k <- 2
@@ -619,6 +624,9 @@ cal_slope <- glm(y  ~ lp,
 slope_CI <- confint(cal_slope) # Confidence interval
 ```
 </details>
+
+```{r, weak_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```
 
 ```{r, res_weak_cal, fig.align='center',echo=FALSE}
 k <- 2
@@ -706,16 +714,17 @@ legend("bottomright",
 
 # Calibration measures ICI, E50, E90 based on secondary logistic regression
 res_calmeas <-
-  cbind(
+  c(
     "ICI" = mean(abs(dt_cal$obs - dt_cal$pred)),
     "E50" = median(abs(dt_cal$obs - dt_cal$pred)),
-    "E90" = unname(quantile(abs(dt_cal$obs - dt_cal$pred), probs = .90))
+    "E90" = unname(quantile(abs(dt_cal$obs - dt_cal$pred), 
+                            probs = .90))
 )
 
 ## Bootstrap confidence intervals
 ## for the calibration  measures (ICI, E50, E90) ------
 alpha <- .05
-B <- 2000 # Set B = 2000 although it takes more time
+B <- 1000 # Set B = 2000 although it takes more time
 set.seed(2022)
 vboot <- bootstraps(vdata, times = B)
 
@@ -733,8 +742,6 @@ numsum_boot <- function(split) {
               y = T,
               data = analysis(split)
 ) 
- return(vcal) 
-}
  
 cal_obs_boot <- predict(vcal, 
                         type = "response",
@@ -770,9 +777,45 @@ numsum_b <- vboot |>
          
          E90 = map_dbl(num_cal_boot, ~ .x$E90)
          )
-
 ```
 </details>
+```{r, moder_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```
+
+```{r, res_numcal, message=FALSE,warning=FALSE, fig.align='center',include=TRUE, echo=FALSE}
+alpha <- .05
+res_numcal <- matrix(c(res_calmeas["ICI"],
+                       quantile(numsum_b$ICI, probs = alpha / 2),
+                       quantile(numsum_b$ICI, 
+                                probs = 1 - alpha / 2),
+                       
+                       res_calmeas["E50"],
+                       quantile(numsum_b$E50, probs = alpha / 2),
+                       quantile(numsum_b$E50, 
+                                probs = 1 - alpha / 2),
+                       
+                       res_calmeas["E90"],
+                       quantile(numsum_b$E90, probs = alpha / 2),
+                       quantile(numsum_b$E90, 
+                                probs = 1 - alpha / 2)
+                       ),
+                     nrow = 1,
+                     ncol = 9,
+                     byrow = T,
+                     dimnames = list(
+                       c("External data"),
+                       rep(
+                         c("Estimate", "Lower.95", "Upper.95"),
+                         3))
+)
+res_numcal <- round(res_numcal, 2)
+kable(res_numcal) |>
+  kable_styling("striped", position = "center") |>
+  add_header_above(c(" " = 1,  
+                     "ICI" = 3, 
+                     "E50" = 3,
+                     "E90" = 3))
+```
 
 ### 2.3 Overall prediction error
 
