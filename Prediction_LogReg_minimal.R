@@ -104,7 +104,7 @@ vdata$pred <- predict(fit_lrm,
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
                family = binomial,
-               data = vdata) # rms:rcs() for more flexible modelling possible
+               data = vdata) # rms::rcs() for more flexible modelling possible
 
 cal_obs <- predict(fit_cal, 
                    type = "response",
