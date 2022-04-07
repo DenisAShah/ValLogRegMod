@@ -981,38 +981,28 @@ Clinical utility can be measured by the net benefit and plotted in a decision cu
   <summary>Click to expand code</summary>
 ```{r, dca, message=FALSE,warning=FALSE, fig.align='center',echo=TRUE,eval=FALSE}
 # Run the stdca function to calculate the net benefit and the elements needed to develop decision curve analysis
-source(here::here("R/dca.R"))
+source(here::here("Functions/dca.R"))
 
 # Models ------------------------------
-fit_csh <- CSC(Hist(time, status_num) ~
-age + size +
-  ncat + hr_status,
-data = rdata,
-fitter = "cph"
-)
-
-# useful objects
-primary_event <- 1 # Set to 2 if cause 2 was of interest
-horizon <- 5 # Set time horizon for prediction (here 5 years)
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
 
 # Development data
 # calculation estimated risk
-rdata$pred5 <- predictRisk(fit_csh,
-  cause = primary_event,
-  newdata = rdata,
-  times = horizon
-)
+rdata$y <- as.numeric(rdata$tum_res) - 1
+rdata$pred <- predict(fit_lrm,
+                      type = "fitted.ind")
 rdata <- as.data.frame(rdata)
-dca_rdata <- stdca(
+dca_rdata <- dca(
   data = rdata,
-  outcome = "status_num",
-  ttoutcome = "time",
-  timepoint = horizon,
-  predictors = "pred5",
-  xstop = 0.35,
-  ymin = -0.01,
-  graph = FALSE,
-  cmprsk = TRUE
+  outcome = "y",
+  predictors = "pred",
+  graph = FALSE
 )
 # Decision curves plot
 oldpar <- par(
@@ -1023,14 +1013,14 @@ oldpar <- par(
   mgp = c(4.25, 1, 0)
 )
 plot(dca_rdata$net.benefit$threshold,
-  dca_rdata$net.benefit$pred5,
+  dca_rdata$net.benefit$pred,
   type = "l",
   lwd = 2,
   lty = 1,
   xlab = "",
   ylab = "Net Benefit",
-  xlim = c(0, 0.5),
-  ylim = c(-0.10, 0.10),
+  xlim = c(0, 1),
+  ylim = c(-0.10, 0.8),
   bty = "n",
   xaxt = "n"
 )
@@ -1039,7 +1029,8 @@ legend("topright",
   lwd = c(2, 2, 2),
   lty = c(1, 2, 1),
   col = c("darkgray", "black", "black"),
-  bty = "n"
+  bty = "n",
+  cex = .85
 )
 lines(dca_rdata$net.benefit$threshold,
   dca_rdata$net.benefit$none,
@@ -1054,40 +1045,34 @@ lines(dca_rdata$net.benefit$threshold,
   col = "darkgray"
 )
 axis(1,
-  at = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)
+  at = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 )
-axis(1,
-  pos = -0.145,
-  at = c(0.1, 0.2, 0.3, 0.4, 0.5),
-  labels = c("1:9", "1:4", "3:7", "2:3", "1:1")
-)
+# axis(1,
+#   pos = -0.145,
+#   at = c(0.1, 0.2, 0.3, 0.4, 0.5),
+#   labels = c("1:9", "1:4", "3:7", "2:3", "1:1")
+# )
 mtext("Threshold probability", 1, line = 2)
-mtext("Harm to benefit ratio", 1, line = 5)
+# mtext("Harm to benefit ratio", 1, line = 5)
 title("Development data")
 par(oldpar)
 
 
 # Validation data
 # Predicted probability calculation
-vdata$pred5 <- predictRisk(fit_csh,
-  cause = primary_event,
-  newdata = vdata,
-  times = horizon
-)
+vdata$y <- as.numeric(vdata$tum_res) - 1
+vdata$pred <- predict(fit_lrm,
+                       newdata = vdata,
+                       type = "fitted.ind")
 vdata <- as.data.frame(vdata)
 # Run decision curve analysis
 # Development data
 # Model without PGR
-dca_vdata <- stdca(
+dca_vdata <- dca(
   data = vdata,
-  outcome = "status_num",
-  ttoutcome = "time",
-  timepoint = 5,
-  predictors = "pred5",
-  xstop = 0.45,
-  ymin = -0.01,
+  outcome = "y",
+  predictors = "pred",
   graph = FALSE,
-  cmprsk = TRUE
 )
 # Decision curves plot
 oldpar <- par(
@@ -1098,14 +1083,14 @@ oldpar <- par(
   mgp = c(4.25, 1, 0)
 )
 plot(dca_vdata$net.benefit$threshold,
-  dca_vdata$net.benefit$pred5,
+  dca_vdata$net.benefit$pred,
   type = "l",
   lwd = 2,
   lty = 1,
   xlab = "",
   ylab = "Net Benefit",
-  xlim = c(0, 0.5),
-  ylim = c(-0.10, 0.10),
+  xlim = c(0, 1),
+  ylim = c(-0.10, 0.8),
   bty = "n",
   xaxt = "n"
 )
@@ -1126,18 +1111,19 @@ legend("topright",
   lwd = c(2, 2, 2),
   lty = c(1, 2, 1),
   col = c("darkgray", "black", "black"),
-  bty = "n"
+  bty = "n",
+  cex = .85
 )
 axis(1,
-  at = c(0, 0.1, 0.2, 0.3, 0.4, 0.5)
+  at = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
 )
-axis(1,
-  pos = -0.145,
-  at = c(0.1, 0.2, 0.3, 0.4, 0.5),
-  labels = c("1:9", "1:4", "3:7", "2:3", "1:1")
-)
+#axis(1,
+#  pos = -0.145,
+#  at = c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
+#  labels = c("1:9", "1:4", "3:7", "2:3", "1:1")
+#)
 mtext("Threshold probability", 1, line = 2)
-mtext("Harm to benefit ratio", 1, line = 5)
+# mtext("Harm to benefit ratio", 1, line = 5)
 title("Validation data")
 par(oldpar)
 ```
@@ -1146,7 +1132,7 @@ par(oldpar)
 ```{r, dca, message=FALSE,warning=FALSE, fig.align='center',echo=FALSE,eval=TRUE}
 ```
 
-If we choose a threshold of 20\%, the model had a net benefit of 0.011 in the development data. In the validation data, the model had a net benefit of 0.014 choosing a threshold of 20\%. 
+
 
 ## Reproducibility ticket
 
