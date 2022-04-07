@@ -12,9 +12,9 @@ output:
 ## Steps
   
 The steps taken in this file are:   
-1. To develop a logistic regression risk prediction model.
-2. To assess the performance of the model in terms of calibration, discrimination and overall prediction error. We calculate the apparent, internal (optimism-corrected) validation and the external validation.
-3. To assess the potential clinical utility the model using decision curve analysis.
+1. To develop a logistic regression risk prediction model.  
+2. To assess the performance of the model in terms of calibration, discrimination and overall prediction error. We calculate the apparent, internal (optimism-corrected) validation and the external validation.  
+3. To assess the potential clinical utility the model using decision curve analysis.  
 
 ### Installing and loading packages and import data
 
@@ -310,7 +310,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$ter_pos,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Positive teratoma tumor",
   ylab = "Estimated risk"
 )
@@ -319,9 +319,10 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$preafp,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Elevated AFP levels",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 
 # Elevated HCG
@@ -329,9 +330,10 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$prehcg,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Elevated HGC levels",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 
 # Postchemotherapy mass size
@@ -340,9 +342,10 @@ plot(vdata$sqpost,
   vdata$pred,
   bty = "n",
   xlim = c(0, 20),
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Square root of postchemotherapy mass size",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 lines(
   lowess(vdata$sqpost, vdata$pred),
@@ -356,9 +359,10 @@ plot(vdata$reduc10,
   vdata$pred,
   bty = "n",
   xlim = c(0, 10),
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Reduction mass size",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 lines(
   lowess(vdata$reduc10, vdata$pred),
@@ -389,7 +393,6 @@ We here calculate:
 
 More details are in ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010);
 
-#### 2.2.1 C-statistic 
 
 <details>
   <summary>Click to expand code</summary>
@@ -599,7 +602,7 @@ kable(res_mean_cal) |>
 Both calibration intercept and O/E ratio showed good mean calibration.
 The prediction model did not systematically over or underestimate the actual risk. 
 
-##### 2.2.2 Weak calibration
+#### 2.2.2 Weak calibration
 The term ‘weak’ refers to the limited flexibility in assessing calibration. We are essentially summarizing calibration of the observed proportions of outcomes versus predicted probabilities using only two parameters i.e. a straight line. In other words, perfect weak
 calibration is defined as mean calibration ratio and calibration slope of unity(or calibration intercept equals to zero). 
 The calibration slope indicates the overall strength of the linear predictor (LP), which can be interpreted as the level of overfitting
@@ -643,7 +646,7 @@ kable(res_weak_cal) |>
   kable_styling("striped", position = "center") 
 ```
 
-##### 2.2.3 Moderate calibration
+#### 2.2.3 Moderate calibration
 Moderate calibration concerns whether among patients with the same predicted risk, the observed event rate equals the predicted risk. A graphical assessment of calibration is possible with predictions on the x-axis, and the outcome on the y-axis. Perfect predictions should be on the 45° line.  For binary outcomes, the plot contains only 0 and 1 values for the y-axis. Smoothing techniques can be used to estimate
 the observed probabilities of the outcome (p(y=1)) in relation to the predicted probabilities, e.g. using the lowess algorithm. The observed probabilities can be also estimated using a secondary logistic regression model using the predicted probability as predictor modelled with splines. We may however expect that the specific type of smoothing may affect the graphical impression, especially in smaller data sets.
 
@@ -829,7 +832,7 @@ Some confidence intervals are calculated using the bootstrap percentile method.
 
 <details>
   <summary>Click to expand code</summary>
-```{r, overall, warning=FALSE, message=FALSE, eval=FALSE}
+```{r, overall, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
 
 # Models -------------------
 dd <- datadist(rdata, adjto.cat = "first")
