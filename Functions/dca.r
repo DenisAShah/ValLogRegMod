@@ -1,3 +1,24 @@
+#' Calculate net benefit and decision curves
+#'
+#' @param data data
+#' @param outcome
+#' @param ttoutcome
+#' @param predictors
+#' @param xstart
+#' @param xstop
+#' @param xby
+#' @param ymin
+#' @param probability
+#' @param harm
+#' @param graph
+#' @param intervention
+#' @param interventionper
+#' @param smooth
+#' @param loess.span
+#' 
+#' 
+#' 
+
 dca <- function(data, outcome, predictors, xstart=0.01, xstop=0.99, xby=0.01, 
   ymin=-0.05, probability=NULL, harm=NULL,graph=TRUE, intervention=FALSE, 
   interventionper=100, smooth=FALSE,loess.span=0.10) {
