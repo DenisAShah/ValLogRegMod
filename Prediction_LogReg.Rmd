@@ -375,6 +375,7 @@ lines(
 ## Goal 2 - Assessing performance of a logistic regression risk prediction model
 
 Here we evaluate the performance of the prediction model in terms of discrimination, calibration and overall prediction error. 
+We assess the prediction performance of the developed model not including LDH internally and in an external data.   
 
 
 ### 2.1 Discrimination
@@ -460,6 +461,7 @@ source(here::here("Functions/internal_cv_lrm.R"))
 
 optim_measures <- bootstrap_cv_lrm(
   db = rdata, 
+  B = 50, # set B lower to speed up the computation
   outcome = "tum_res", 
   formula = "tum_res ~ 
                   ter_pos + preafp + prehcg + 
@@ -512,7 +514,6 @@ kable(res_discr) |>
                      "Apparent" = 3, 
                      "Internal" = 3, 
                      "External" = 3))
-
 ```
 C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78 (95% CI: 0.73-0.84) in the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a C-statistic of 0.81.  
 
@@ -535,7 +536,7 @@ The mean calibration can be estimated:
 
 <details>
   <summary>Click to expand code</summary>
-```{r, mean_cal, fig.align='center',echo=TRUE, eval=FALSE}
+```{r, mean_cal, fig.align='center',echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
 # Models
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
@@ -606,7 +607,7 @@ The calibration slope indicates the overall strength of the linear predictor (LP
 
 <details>
   <summary>Click to expand code</summary>
-```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE}
+```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE ,message=FALSE, warning=FALSE}
 # Models
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
@@ -648,7 +649,7 @@ the observed probabilities of the outcome (p(y=1)) in relation to the predicted 
 
 <details>
   <summary>Click to expand code</summary>
-```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE}
+```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE}
 # Models
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
@@ -816,24 +817,21 @@ kable(res_numcal) |>
                      "E50" = 3,
                      "E90" = 3))
 ```
+Calibration measures (i.e., ICI, E50, E90) using a 'secondary' logistic regression to estimate the observed probability of the event indicate good calibration.  
+Calibration measures might also be calculated using the non-parametric method (e.g., lowess) to estimate the observed probability of the event. In this setting, the user can use the results of ```stats::lowess()``` function to calculate the absolute difference between the estimated observed and predicted probabilities. Another nice function to provide the calibration plot and the corresponding performance measures is ```rms::val.prob()```. Another alternative is ```riskRegression::Score()```.  
 
-### 2.3 Overall prediction error
 
+### 2.3 Overall performance measures
+The overall performance measures generally estimate the distance between the predicted outcome and actual outcome.  
 We calculate the Brier Score, and the scaled Brier scale (also indicated as index of prediction accuracy) and the corresponding confidence intervals.
 
 Some confidence intervals are calculated using the bootstrap percentile method.
-```{r, bootstrap,warning=FALSE}
-# Bootstrapping data
-set.seed(20201214)
-B <- 10 # number of bootstrap samples
-rboot <- bootstraps(rdata, times = B)
-vboot <- bootstraps(vdata, times = B)
-```
 
-```{r, overall, warning=FALSE}
+<details>
+  <summary>Click to expand code</summary>
+```{r, overall, warning=FALSE, message=FALSE, eval=FALSE}
 
 # Models -------------------
-# Models
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
 fit_lrm <- lrm(tum_res ~ 
@@ -867,28 +865,41 @@ score_vdata <- Score(
   plots = "calibration"
 )
 
-# Bootstrap ------
-# Functions to expand data and calculate Brier, IPA and AUC in bootstrap
-# samples.
-# For Brier and AUC, bootstrap should be computationally faster when
+# Optimism-corrected Brier and scaled Brier (IPA)
+source(here::here("Functions/internal_cv_lrm.R"))
+
+optim_measures <- bootstrap_cv_lrm(
+  db = rdata, 
+  B = 50, # set B lower to speed up the computation
+  outcome = "tum_res", 
+  formula = "tum_res ~ 
+                  ter_pos + preafp + prehcg + 
+                  sqpost + reduc10", 
+  formula_score = "tum_res ~ 1")
+
+
+# Bootstrap confidence intervals for scaled Brier score -------
+# For Brier, bootstrap should be computationally faster when
 # data has more than 2000 rows (see ?riskRegression::Score).
 # Our data has 1000 row so we will need only bootstrap to calculate
 # confidence intervals of the scaled Brier (IPA) since
 # it is not provided by riskRegression::Score() function.
 
+# Bootstrapping data
+set.seed(2022)
+B <- 50 # number of bootstrap samples
+rboot <- bootstraps(rdata, times = B)
+vboot <- bootstraps(vdata, times = B)
 
 # Score functions in any bootstrap data
 score_boot <- function(split) {
   Score(
-    list("csh_validation" = fit_csh),
-    formula = Hist(time, status_num) ~ 1,
-    cens.model = "km",
+    list("Logistic" = fit_lrm),
+    formula = tum_res ~ 1,
     data = analysis(split),
     conf.int = TRUE,
-    times = horizon,
-    metrics = c("auc", "brier"),
+    metrics = c("auc","brier"),
     summary = c("ipa"),
-    cause = primary_event,
     plots = "calibration"
   )
 }
@@ -897,39 +908,70 @@ score_boot <- function(split) {
 rboot <- rboot |> mutate(
   score = map(splits, score_boot),
   scaled_brier = map_dbl(score, function(x) {
-    x$Brier$score[model == "csh_validation"]$IPA
+    x$Brier$score[model == "Logistic"]$IPA
   })
 )
 # Validation data
 vboot <- vboot |> mutate(
   score = map(splits, score_boot),
   scaled_brier = map_dbl(score, function(x) {
-    x$Brier$score[model == "csh_validation"]$IPA
+    x$Brier$score[model == "Logistic"]$IPA
   })
 )
 
+```
+</details>
 
-olpar <- par(mfrow = c(2, 2))
-aa <- val.prob(vdata$pred,
-               as.numeric(vdata$tum_res) - 1)
-
-zz <- lowess(vdata$pred, as.numeric(vdata$tum_res) - 1, iter = 0)
-plot(zz$x, zz$y, 
-     type = "l",
-     xlim = c(0, 1),
-     ylim = c(0, 1),
-     bty = "n")
-
-plotCalibration(score_vdata)
-
+```{r, overall, fig.align='center', warning=FALSE, eval=TRUE}
 ```
 
 ```{r, res_ov, fig.align='center',echo=FALSE}
 # Table overall measures
+alpha <- .05
+k <- 2
+res_ov <- matrix(c(
+                 score_rdata$Brier$score$Brier[2],
+                 score_rdata$Brier$score$lower[2],
+                 score_rdata$Brier$score$upper[2],
+                 
+                 optim_measures["Brier corrected"],
+                 NA,
+                 NA,
+                 
+                 score_vdata$Brier$score$Brier[2],
+                 score_vdata$Brier$score$lower[2],
+                 score_vdata$Brier$score$upper[2],
+                 
+                 score_rdata$Brier$score$IPA[2],
+                 quantile(rboot$scaled_brier, probs = alpha / 2),
+                 quantile(rboot$scaled_brier, probs = 1 - alpha / 2),
+                 
+                 optim_measures["IPA corrected"],
+                 NA,
+                 NA,
+                 
+                 score_vdata$Brier$score$IPA[2],
+                 quantile(vboot$scaled_brier, probs = alpha / 2),
+                 quantile(vboot$scaled_brier, probs = 1 - alpha / 2)
+                 ),
+                 nrow = 2,
+                 ncol = 9,
+                 byrow = T,
+                 dimnames = list(
+                   c("Brier", "scaled Brier (IPA)"),
+                   rep(c("Estimate", "Lower.95", "Upper.95"), 3))
+)
+
+res_ov <- round(res_ov, 2) # Digits
+kable(res_ov) |>
+  kable_styling("striped", position = "center") |>
+  add_header_above(c(" " = 1, 
+                     "Apparent" = 3, 
+                     "Internal" = 3, 
+                     "External" = 3))
 
 ```
 
-Note: unexpectedly, the point estimate for the Brier score is lower (thus better) and for the scaled Brier score is higher (thus better) in the validation data compared to the development data.
 
 ## Goal 3 -  Clinical utility
 
@@ -939,7 +981,7 @@ Clinical utility can be measured by the net benefit and plotted in a decision cu
   <summary>Click to expand code</summary>
 ```{r, dca, message=FALSE,warning=FALSE, fig.align='center',echo=TRUE,eval=FALSE}
 # Run the stdca function to calculate the net benefit and the elements needed to develop decision curve analysis
-source(here::here("R/stdca.R"))
+source(here::here("R/dca.R"))
 
 # Models ------------------------------
 fit_csh <- CSC(Hist(time, status_num) ~
