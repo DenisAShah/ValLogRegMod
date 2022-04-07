@@ -17,11 +17,10 @@ Validation of logistic regression risk prediction models
     prediction
     model](#goal-2---assessing-performance-of-a-logistic-regression-risk-prediction-model)
     -   [2.1 Discrimination](#21-discrimination)
-        -   [2.2.1 C-statistic](#221-c-statistic)
     -   [2.2 Calibration](#22-calibration)
         -   [2.2.1 Mean calibration](#221-mean-calibration)
-            -   [2.2.2 Weak calibration](#222-weak-calibration)
-            -   [2.2.3 Moderate calibration](#223-moderate-calibration)
+        -   [2.2.2 Weak calibration](#222-weak-calibration)
+        -   [2.2.3 Moderate calibration](#223-moderate-calibration)
     -   [2.3 Overall performance
         measures](#23-overall-performance-measures)
 -   [Goal 3 - Clinical utility](#goal-3---clinical-utility)
@@ -30,12 +29,12 @@ Validation of logistic regression risk prediction models
 ## Steps
 
 The steps taken in this file are:  
-1. To develop a logistic regression risk prediction model. 2. To assess
-the performance of the model in terms of calibration, discrimination and
-overall prediction error. We calculate the apparent, internal
-(optimism-corrected) validation and the external validation. 3. To
-assess the potential clinical utility the model using decision curve
-analysis.
+1. To develop a logistic regression risk prediction model.  
+2. To assess the performance of the model in terms of calibration,
+discrimination and overall prediction error. We calculate the apparent,
+internal (optimism-corrected) validation and the external validation.  
+3. To assess the potential clinical utility the model using decision
+curve analysis.
 
 ### Installing and loading packages and import data
 
@@ -679,7 +678,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$ter_pos,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Positive teratoma tumor",
   ylab = "Estimated risk"
 )
@@ -688,9 +687,10 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$preafp,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Elevated AFP levels",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 
 # Elevated HCG
@@ -698,9 +698,10 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(vdata$prehcg,
   vdata$pred,
   bty = "n",
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Elevated HGC levels",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 
 # Postchemotherapy mass size
@@ -709,9 +710,10 @@ plot(vdata$sqpost,
   vdata$pred,
   bty = "n",
   xlim = c(0, 20),
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Square root of postchemotherapy mass size",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 lines(
   lowess(vdata$sqpost, vdata$pred),
@@ -725,9 +727,10 @@ plot(vdata$reduc10,
   vdata$pred,
   bty = "n",
   xlim = c(0, 10),
-  ylim = c(0, 1),
+  ylim = c(0, 1.2),
   xlab = "Reduction mass size",
-  ylab = "Estimated risk"
+  ylab = "Estimated risk",
+  cex.lab = .85
 )
 lines(
   lowess(vdata$reduc10, vdata$pred),
@@ -773,8 +776,6 @@ More details are in [“Assessing the performance of prediction models: a
 framework for some traditional and novel
 measures”](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by
 Steyerberg et al. (2010);
-
-#### 2.2.1 C-statistic
 
 <details>
 <summary>
@@ -969,10 +970,10 @@ Discrimination slope
 0.28
 </td>
 <td style="text-align:right;">
-0.33
+0.34
 </td>
 <td style="text-align:right;">
-0.29
+0.30
 </td>
 <td style="text-align:right;">
 NA
@@ -987,7 +988,7 @@ NA
 0.19
 </td>
 <td style="text-align:right;">
-0.30
+0.29
 </td>
 </tr>
 </tbody>
@@ -1117,7 +1118,7 @@ Both calibration intercept and O/E ratio showed good mean calibration.
 The prediction model did not systematically over or underestimate the
 actual risk.
 
-##### 2.2.2 Weak calibration
+#### 2.2.2 Weak calibration
 
 The term ‘weak’ refers to the limited flexibility in assessing
 calibration. We are essentially summarizing calibration of the observed
@@ -1192,7 +1193,7 @@ Calibration slope
 </tbody>
 </table>
 
-##### 2.2.3 Moderate calibration
+#### 2.2.3 Moderate calibration
 
 Moderate calibration concerns whether among patients with the same
 predicted risk, the observed event rate equals the predicted risk. A
@@ -1474,6 +1475,97 @@ method.
 <summary>
 Click to expand code
 </summary>
+
+``` r
+# Models -------------------
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
+
+# Overall performance measures ----------------
+
+# Development data
+score_rdata <- Score(
+  list("Development set" = fit_lrm),
+  formula = tum_res ~ 1,
+  data = rdata,
+  conf.int = TRUE,
+  metrics = c("auc", "brier"),
+  summary = c("ipa"),
+  plots = "calibration"
+)
+
+# Validation data
+score_vdata <- Score(
+  list("Validation set" = fit_lrm),
+  formula = tum_res ~ 1,
+  data = vdata,
+  conf.int = TRUE,
+  metrics = c("auc", "brier"),
+  summary = c("ipa"),
+  plots = "calibration"
+)
+
+# Optimism-corrected Brier and scaled Brier (IPA)
+source(here::here("Functions/internal_cv_lrm.R"))
+
+optim_measures <- bootstrap_cv_lrm(
+  db = rdata, 
+  B = 50, # set B lower to speed up the computation
+  outcome = "tum_res", 
+  formula = "tum_res ~ 
+                  ter_pos + preafp + prehcg + 
+                  sqpost + reduc10", 
+  formula_score = "tum_res ~ 1")
+
+
+# Bootstrap confidence intervals for scaled Brier score -------
+# For Brier, bootstrap should be computationally faster when
+# data has more than 2000 rows (see ?riskRegression::Score).
+# Our data has 1000 row so we will need only bootstrap to calculate
+# confidence intervals of the scaled Brier (IPA) since
+# it is not provided by riskRegression::Score() function.
+
+# Bootstrapping data
+set.seed(2022)
+B <- 50 # number of bootstrap samples
+rboot <- bootstraps(rdata, times = B)
+vboot <- bootstraps(vdata, times = B)
+
+# Score functions in any bootstrap data
+score_boot <- function(split) {
+  Score(
+    list("Logistic" = fit_lrm),
+    formula = tum_res ~ 1,
+    data = analysis(split),
+    conf.int = TRUE,
+    metrics = c("auc","brier"),
+    summary = c("ipa"),
+    plots = "calibration"
+  )
+}
+
+# Development data
+rboot <- rboot |> mutate(
+  score = map(splits, score_boot),
+  scaled_brier = map_dbl(score, function(x) {
+    x$Brier$score[model == "Logistic"]$IPA
+  })
+)
+# Validation data
+vboot <- vboot |> mutate(
+  score = map(splits, score_boot),
+  scaled_brier = map_dbl(score, function(x) {
+    x$Brier$score[model == "Logistic"]$IPA
+  })
+)
+```
+
 </details>
 
     ## Joining, by = "id_boot"
