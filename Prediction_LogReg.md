@@ -4,8 +4,9 @@ Validation of logistic regression risk prediction models
 -   [Steps](#steps)
     -   [Installing and loading packages and import
         data](#installing-and-loading-packages-and-import-data)
-    -   [Descriptive statistics](#descriptive-statistics)
--   [Goal 1 - develop a logistic regression risk prediction
+    -   [Data description](#data-description)
+        -   [Descriptive statistics](#descriptive-statistics)
+-   [Goal 1 - Develop a logistic regression risk prediction
     model](#goal-1---develop-a-logistic-regression-risk-prediction-model)
     -   [1.1 Check non-linearity of continuous
         predictors](#11-check-non-linearity-of-continuous-predictors)
@@ -68,6 +69,26 @@ rdata <- readRDS(here::here("Data/rdata.rds"))
 vdata <- readRDS(here::here("Data/vdata.rds"))
 ```
 
+### Data description
+
+Men with metastatic non-seminomatous testicular cancer can often be
+cured nowadays by cisplatin based chemotherapy. After chemotherapy,
+surgical resection is a generally accepted treatment to remove remnants
+of the initial metastases, since residual tumor may still be present. In
+the absence of tumor, resection has no therapeutic benefits, while it is
+associated with hospital admission, and risks of permanent morbidity and
+mortality. Logistic regression models were developed to predict the
+presence of residual tumor, combining well-known predictors, such as the
+histology of the primary tumor, pre-chemotherapy levels of tumor
+markers, and (reduction in) residual mass size.  
+We first consider a data set (rdata) with 544 patients to develop a
+prediction model that includes 5 predictors. We then extend this model
+with the pre-chemotherapy level of the tumor marker lactate
+dehydrogenase (LDH). This illustrates ways to assess the incremental
+value of a marker. LDH values were log transformed, after standardizing
+by dividing by the local upper levels of normal values, after
+examination of non-linearity with restricted cubic spline functions.
+
 We first consider a data set with 544 patients to develop a prediction
 model that includes 5 predictors (rdata). In a later study, we
 externally validated the 5 predictor model in 273 patients from a
@@ -88,7 +109,7 @@ for some traditional and novel
 measures”](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by
 Steyerberg et al. (2010).
 
-### Descriptive statistics
+#### Descriptive statistics
 
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -256,18 +277,18 @@ Unknown
 </tbody>
 </table>
 
-## Goal 1 - develop a logistic regression risk prediction model
+## Goal 1 - Develop a logistic regression risk prediction model
 
 ### 1.1 Check non-linearity of continuous predictors
 
 Here we investigate the potential non-linear relation between continuous
-predictors (i.e. age and size) and the outcomes. We apply three-knot
-restricted cubic splines using `rms::rcs()` function (details are given
-in e.g. Frank Harrell’s book ‘Regression Model Strategies (second
-edition)’, page 27. We assess the potential non-linearity graphically
-(plotting the two continuous predictors against the log odds (XB or
-linear predictor) of both event types. Also, we compare the models with
-and without splines based on the AIC.
+predictors and the outcomes. We apply three-knot restricted cubic
+splines using `rms::rcs()` function (details are given in e.g. Frank
+Harrell’s book ‘Regression Model Strategies (second edition)’, page 27.
+We assess the potential non-linearity graphically (plotting the two
+continuous predictors against the log odds (XB or linear predictor) of
+both event types. Also, we compare the models with and without splines
+based on the AIC.
 
 <details>
 <summary>
@@ -967,13 +988,13 @@ Discrimination slope
 0.30
 </td>
 <td style="text-align:right;">
-0.28
+0.26
 </td>
 <td style="text-align:right;">
 0.34
 </td>
 <td style="text-align:right;">
-0.30
+0.29
 </td>
 <td style="text-align:right;">
 NA
@@ -985,7 +1006,7 @@ NA
 0.24
 </td>
 <td style="text-align:right;">
-0.19
+0.17
 </td>
 <td style="text-align:right;">
 0.29
@@ -1010,7 +1031,9 @@ a testicular cancer patient, the observed frequency of tumor should be
 approximately 20 out of 100 patients with such a prediction.
 
 Different level of calibration can be estimated: mean, weak, and
-moderate calibration.
+moderate calibration according to the calibration hierarchy defined by
+Van Calster et
+al. [here](https://www.sciencedirect.com/science/article/pii/S0895435615005818).
 
 #### 2.2.1 Mean calibration
 
@@ -1464,8 +1487,8 @@ the calibration plot and the corresponding performance measures is
 
 The overall performance measures generally estimate the distance between
 the predicted outcome and actual outcome.  
-We calculate the Brier Score, and the scaled Brier scale (also indicated
-as index of prediction accuracy) and the corresponding confidence
+We calculate the Brier Score, and the scaled Brier scale (also known as
+index of prediction accuracy) and the corresponding confidence
 intervals.
 
 Some confidence intervals are calculated using the bootstrap percentile
@@ -1705,10 +1728,59 @@ NA
 
 ## Goal 3 - Clinical utility
 
-Clinical utility can be measured by the net benefit and plotted in a
-decision curve. Details about net benefit, decision curve calculation
-and interpretation are provided in the manuscript (see also the
-appendix) and its references.
+Discrimination and calibration measures are essential to assess the
+prediction performance but insufficient to evaluate the potential
+clinical utility of a risk prediction model for decision making. When
+new markers are available, clinical utility assessment evaluates whether
+the extended model helps to improve decision making.  
+Clinical utility is measured by the net benefit that includes the number
+of true positives and the number of false positives. Generally, in
+medicine, clinicians accepts to treat a certain number of patients for
+which interventions are unnecessary to be event free for a given time
+horizon. So, false negatives (the harm of not being event free for a
+given time horizon) are more important than false positives (the harm of
+unnecessary interventions). Thus, net benefit is the number of true
+positives classifications minus the false positives classifications
+weighted by a factor related to the harm of not preventing the event
+versus unnecessary interventions. The weighting is derived from the
+threshold probability to the event of interest (e.g. residual tumor).
+For example, a threshold of 20% implies that additional interventions
+for 4 patients of whom one would have experience the event if untreated
+is acceptable (thus treating 3 unnecessary patients). This strategy is
+compared with the strategies of treat all and treat none patients. If
+overtreatment is harmful, a higher threshold should be used.
+
+The net benefit is calculated as:
+
+<img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BTP%7D%7Bn%7D-%5Cfrac%7BFP%7D%7Bn%7D*%5Cfrac%7Bp_t%7D%7B1-p_t%7D%7D">
+
+*TP*=true positive patients  
+*FP*=false positive patients  
+*n*=number of patients and *p*<sub>t</sub> is the risk threshold.
+
+The decision curve is calculated as follows:
+
+1.  Choose a time horizon;
+2.  Specify a risk threshold which reflects the ratio between harms and
+    benefit of an additional intervention;
+3.  Calculate the number of true positive and false positive given the
+    threshold specified in (2);
+4.  Calculate the net benefit of the risk prediction model;
+5.  Plot net benefit on the *y-axis* against the risk threshold on the
+    *x-axis*;
+6.  Repeat steps 2-4 for each model consideration;
+7.  Repeat steps 2-4 for the strategy of assuming all patients are
+    treated;
+8.  Draw a straight line parallel to the *x-axis* at y=0 representing
+    the net benefit associated with the strategy of assuming that all
+    patients are not treated.
+
+Given some thresholds, the model/strategy with higher net benefit
+represents the one that potentially improves clinical decision making.
+However, poor discrimination and calibration lead to lower net benefit.
+
+More details are available in the paper of Vickers et
+al. [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577036/).
 
 <details>
 <summary>
@@ -1867,6 +1939,84 @@ par(oldpar)
 </details>
 
 <img src="imgs/dca-1.png" width="672" style="display: block; margin: auto;" /><img src="imgs/dca-2.png" width="672" style="display: block; margin: auto;" />
+
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Net benefit
+
+</div>
+
+</th>
+</tr>
+<tr>
+<th style="text-align:right;">
+Threshold
+</th>
+<th style="text-align:right;">
+Treat all
+</th>
+<th style="text-align:right;">
+Model
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+0.2
+</td>
+<td style="text-align:right;">
+0.437
+</td>
+<td style="text-align:right;">
+0.439
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+0.2
+</td>
+<td style="text-align:right;">
+0.652
+</td>
+<td style="text-align:right;">
+0.653
+</td>
+</tr>
+</tbody>
+</table>
+
+A cut-off of 20% implies a relative weight of 1:4 for false-positive
+decisions against true-positive decisions. In the development data, the
+Net Benefit (NB) was 0.439. This means that the model might identify
+approximately 44 patients out of 100 who may have residuals tumors and
+then tumor resection might be useful. If we would do resection in all,
+the NB would however be similar: 0.437 so the clinical utility of the
+model at 20% threshold is very limited.
+
+Similar results were estimated during external validation. In the
+validation data, the NB of the risk regression model was 0.653. If we
+would do resection in all patients, the NB would be similar 0.652.
+
+However, the decision curve shows that the NB would be much larger for
+higher threshold values, i.e. patients accepting higher risks of
+residual tumor.
+
+Moreover, potential net benefit can be defined in terms of reduction of
+avoidable interventions (e.g tumor resection per 100 patients) by:
+
+<img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BNB_%7Bmodel%7D%20-%20NB_%7Ball%7D%7D%7B(p_t%2F%20(1-p_t))%7D*100%7D%0A">
+
+where *NB*<sub>model</sub> is the net benefit of the prediction model,
+*NB*<sub>all</sub> is the net benefit of the strategy treat all and
+*p*<sub>*t*</sub> is the risk threshold.
 
 ## Reproducibility ticket
 
