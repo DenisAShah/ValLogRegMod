@@ -728,7 +728,7 @@ segments(
 )
 abline(a = 0, b = 1, col = "gray")
 legend("topleft",
-       c("Ideal", "Non - parametricLowess", 
+       c("Ideal", "Non parametric (Lowess)", 
          "Logistic",
          "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
