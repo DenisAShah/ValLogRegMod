@@ -395,7 +395,7 @@ par(oldpar)
 
 </details>
 
-<img src="imgs/ff-1.png" width="672" style="display: block; margin: auto;" />
+<img src="imgs/03_PredLogReg/ff-1.png" width="672" style="display: block; margin: auto;" />
 
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -762,7 +762,7 @@ lines(
 
 </details>
 
-<img src="imgs/plot_risk-1.png" width="672" style="display: block; margin: auto;" />
+<img src="imgs/03_PredLogReg/plot_risk-1.png" width="672" style="display: block; margin: auto;" />
 
 ## Goal 2 - Assessing performance of a logistic regression risk prediction model
 
@@ -991,10 +991,10 @@ Discrimination slope
 0.27
 </td>
 <td style="text-align:right;">
-0.35
+0.32
 </td>
 <td style="text-align:right;">
-0.29
+0.30
 </td>
 <td style="text-align:right;">
 NA
@@ -1369,7 +1369,7 @@ numsum_b <- vboot |>
 
 </details>
 
-<img src="imgs/moder_cal-1.png" width="672" style="display: block; margin: auto;" />
+<img src="imgs/03_PredLogReg/moder_cal-1.png" width="672" style="display: block; margin: auto;" />
 
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -1938,7 +1938,7 @@ par(oldpar)
 
 </details>
 
-<img src="imgs/dca-1.png" width="672" style="display: block; margin: auto;" /><img src="imgs/dca-2.png" width="672" style="display: block; margin: auto;" />
+<img src="imgs/03_PredLogReg/dca-1.png" width="672" style="display: block; margin: auto;" /><img src="imgs/03_PredLogReg/dca-2.png" width="672" style="display: block; margin: auto;" />
 
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
