@@ -48,8 +48,8 @@ res_discr <- matrix(c(
      val_rdata[["C Index"]] + qnorm(.975)*(val_rdata[["S.D."]]/2),
      
      val_vdata[["C Index"]],
-     val_vdata[["C Index"]] - qnorm(.975)*(val_rdata[["S.D."]]/2),
-     val_vdata[["C Index"]] + qnorm(.975)*(val_rdata[["S.D."]]/2)
+     val_vdata[["C Index"]] - qnorm(.975)*(val_vdata[["S.D."]]/2),
+     val_vdata[["C Index"]] + qnorm(.975)*(val_vdata[["S.D."]]/2)
     ),
     nrow = 2, 
     ncol = 3,
