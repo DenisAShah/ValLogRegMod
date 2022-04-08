@@ -86,9 +86,9 @@ cdata$tum_res <- factor(cdata$tum_res,
                         levels = c(0, 1),
                         labels = c("No", "Yes"))
 label(cdata$tum_res) <- "Residual tumor at postchemotherapy resection"
-label(cdata$ter_pos) <- "Residual tumor at postchemotherapy resection "
-label(cdata$preafp) <- "Prechemotherapy AFP elevated?"
-label(cdata$prehcg) <- "Prechemotherapy HCG elevated?"
+label(cdata$ter_pos) <- "Primary tumor teratoma positive "
+label(cdata$preafp) <- "Elevated prechemotherapy AFP"
+label(cdata$prehcg) <- "Elevated Prechemotherapy HCG"
 label(cdata$sqpost) <- "Square root of postchemotherapy mass size"
 label(cdata$reduc10) <- "Reduction in mass size per 10%"
 label(cdata$lnldhst) <- "Prechemotherapy LDH"
