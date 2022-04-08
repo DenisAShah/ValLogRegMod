@@ -24,7 +24,7 @@ The following libraries are used in this file, the code chunk below will a) chec
 # Knitr options
 knitr::opts_chunk$set(
   fig.retina = 3,
-  fig.path = "imgs/",
+  fig.path = "imgs/03_PredLogReg/",
   echo = FALSE
 )
 ```
