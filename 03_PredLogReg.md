@@ -139,7 +139,7 @@ Residual tumor at postchemotherapy resection
 </tr>
 <tr>
 <td style="text-align:left;">
-Residual tumor at postchemotherapy resection
+Primary tumor teratoma positive
 </td>
 <td style="text-align:left;">
 292 (54%)
@@ -150,7 +150,7 @@ Residual tumor at postchemotherapy resection
 </tr>
 <tr>
 <td style="text-align:left;">
-Prechemotherapy AFP elevated?
+Elevated prechemotherapy AFP
 </td>
 <td style="text-align:left;">
 358 (66%)
@@ -161,7 +161,7 @@ Prechemotherapy AFP elevated?
 </tr>
 <tr>
 <td style="text-align:left;">
-Prechemotherapy HCG elevated?
+Elevated Prechemotherapy HCG
 </td>
 <td style="text-align:left;">
 339 (62%)
@@ -991,10 +991,10 @@ Discrimination slope
 0.27
 </td>
 <td style="text-align:right;">
-0.32
+0.33
 </td>
 <td style="text-align:right;">
-0.30
+0.29
 </td>
 <td style="text-align:right;">
 NA
@@ -1009,7 +1009,7 @@ NA
 0.19
 </td>
 <td style="text-align:right;">
-0.29
+0.31
 </td>
 </tr>
 </tbody>
