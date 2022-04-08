@@ -116,11 +116,11 @@ gtsummary::tbl_summary(
 
 ```
 
-## Goal 1 - develop a logistic regression risk prediction model
+## Goal 1 - Develop a logistic regression risk prediction model
 
 ### 1.1 Check non-linearity of continuous predictors
 
-Here we investigate the potential non-linear relation between continuous predictors (i.e. age and size) and the outcomes. We apply three-knot restricted cubic splines using `rms::rcs()` function (details are given in e.g. Frank Harrell's book 'Regression Model Strategies (second edition)', page 27. We assess the potential non-linearity graphically (plotting the two continuous predictors against the log odds (XB or linear predictor) of both event types. Also, we compare the models with and without splines based on the AIC.
+Here we investigate the potential non-linear relation between continuous predictors and the outcomes. We apply three-knot restricted cubic splines using `rms::rcs()` function (details are given in e.g. Frank Harrell's book 'Regression Model Strategies (second edition)', page 27. We assess the potential non-linearity graphically (plotting the two continuous predictors against the log odds (XB or linear predictor) of both event types. Also, we compare the models with and without splines based on the AIC.
 
 <details>
   <summary>Click to expand code</summary>
@@ -832,7 +832,7 @@ Calibration measures might also be calculated using the non-parametric method (e
 
 ### 2.3 Overall performance measures
 The overall performance measures generally estimate the distance between the predicted outcome and actual outcome.  
-We calculate the Brier Score, and the scaled Brier scale (also indicated as index of prediction accuracy) and the corresponding confidence intervals.
+We calculate the Brier Score, and the scaled Brier scale (also known as index of prediction accuracy) and the corresponding confidence intervals.
 
 Some confidence intervals are calculated using the bootstrap percentile method.
 
@@ -985,7 +985,7 @@ kable(res_ov) |>
 ## Goal 3 -  Clinical utility
 Discrimination and calibration measures are essential to assess the prediction performance but insufficient to evaluate the potential clinical utility of a risk prediction model for decision making. When new markers are available, clinical utility assessment evaluates whether the extended model helps to improve decision making.  
 Clinical utility is measured by the net benefit that includes the number of true positives and the number of false positives.
-Generally, in medicine, clinicians accepts to treat a certain number of patients for which interventions are unnecessary to be event free for a given time horizon. So, false negatives (the harm of not being event free for a given time horizon) are more important than false positives (the harm of unnecessary interventions). Thus, net benefit is the number of true positives classifications minus the false positives classifications weighted by a factor related to the harm of not preventing the event versus unnecessary interventions. The weighting is derived from the threshold probability to the event of interest (e.g. residual tumor). For example, a threshold of 20% implies that additional interventions for 4 patients of whom one would have experience the event if untreated is acceptable (thus treating 9 unnecessary patients). This strategy is compared with the strategies of treat all and treat none patients. If overtreatment is harmful, a higher threshold should be used. 
+Generally, in medicine, clinicians accepts to treat a certain number of patients for which interventions are unnecessary to be event free for a given time horizon. So, false negatives (the harm of not being event free for a given time horizon) are more important than false positives (the harm of unnecessary interventions). Thus, net benefit is the number of true positives classifications minus the false positives classifications weighted by a factor related to the harm of not preventing the event versus unnecessary interventions. The weighting is derived from the threshold probability to the event of interest (e.g. residual tumor). For example, a threshold of 20% implies that additional interventions for 4 patients of whom one would have experience the event if untreated is acceptable (thus treating 3 unnecessary patients). This strategy is compared with the strategies of treat all and treat none patients. If overtreatment is harmful, a higher threshold should be used. 
 
 The net benefit is calculated as:  
   
@@ -1166,7 +1166,26 @@ par(oldpar)
 ```{r, dca, message=FALSE,warning=FALSE, fig.align='center',echo=FALSE,eval=TRUE}
 ```
 
-A cut-off of 20% implies a relative weight of 1:4 for false-positive decisions against true-positive decisions. In the development data, the Net Benefit (NB) was 0.439. This means that the model might identify approximately 44 patients out of 100 who may have residuals tumors and then tumor resection might be useful. If we would do resection in all, the NB would however be similar: 0.437 so the clinical utility of the model at 20% threshold is limited. 
+```{r, res_dca, fig.align='center',echo=FALSE}
+
+readoff_dca <- rbind.data.frame(
+  dca_rdata$net.benefit[dca_rdata$net.benefit$threshold == 0.2,],
+  dca_vdata$net.benefit[dca_vdata$net.benefit$threshold == 0.2,]
+)
+readoff_dca$none <- NULL
+
+colnames(readoff_dca) <- c("Threshold", "Treat all", "Model")
+rownames(readoff_dca) <- NULL
+readoff_dca <- round(readoff_dca, 3)
+
+kable(readoff_dca) |>
+  kable_styling("striped", position = "center") |>
+  add_header_above(c(" " = 1, 
+                     "Net benefit" = 2))
+
+```
+
+A cut-off of 20% implies a relative weight of 1:4 for false-positive decisions against true-positive decisions. In the development data, the Net Benefit (NB) was 0.439. This means that the model might identify approximately 44 patients out of 100 who may have residuals tumors and then tumor resection might be useful. If we would do resection in all, the NB would however be similar: 0.437 so the clinical utility of the model at 20% threshold is very limited. 
 
 Similar results were estimated during external validation. In the validation data, the NB of the risk regression model was
 0.653. If we would do resection in all patients, the NB would be similar 0.652. 
@@ -1174,7 +1193,7 @@ Similar results were estimated during external validation. In the validation dat
 However, the decision curve shows that the NB would be much larger for higher threshold values, i.e. patients accepting higher risks of
 residual tumor. 
 
-Moreover, potential net benefit can be defined in terms of reduction of avoidable interventions (e.g adjuvant chemotherapy per 100 patients) by:
+Moreover, potential net benefit can be defined in terms of reduction of avoidable interventions (e.g tumor resection per 100 patients) by:
   
 <img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BNB_%7Bmodel%7D%20-%20NB_%7Ball%7D%7D%7B(p_t%2F%20(1-p_t))%7D*100%7D%0A">  
   
