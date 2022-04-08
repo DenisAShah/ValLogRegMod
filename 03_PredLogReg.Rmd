@@ -669,6 +669,14 @@ fit_lrm <- lrm(tum_res ~
 options(datadist = NULL)
 
 ## Calibration plot
+# First, prepare histogram of estimated risks for x-axis
+spike_bounds <- c(0, 0.20)
+bin_breaks <- seq(0, 1, length.out = 100 + 1)
+freqs <- table(cut(vdata$pred, breaks = bin_breaks))
+bins <- bin_breaks[-1]
+freqs_valid <- freqs[freqs > 0]
+freqs_rescaled <- spike_bounds[1] + (spike_bounds[2] - spike_bounds[1]) * (freqs_valid - min(freqs_valid)) / (max(freqs_valid) - min(freqs_valid))
+
 vdata$y <- as.numeric(vdata$tum_res) - 1
 vdata$pred <- predict(fit_lrm,
                       newdata = vdata,
@@ -703,7 +711,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(cal_lowess,
      type = "l",
      xlim = c(0, 1),
-     ylim = c(0, 1),
+     ylim = c(-.1, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",
@@ -712,15 +720,22 @@ plot(cal_lowess,
 lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
 lines(dt_cal$pred, dt_cal$lower, lwd = 2, lty = 3)
 lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
+segments(
+  x0 = bins[freqs > 0], 
+  y0 = spike_bounds[1], 
+  x1 = bins[freqs > 0], 
+  y1 = freqs_rescaled
+)
 abline(a = 0, b = 1, col = "gray")
-legend("bottomright",
+legend("topleft",
        c("Ideal", "Non - parametricLowess", 
          "Logistic",
          "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
-       bty = "n")
+       bty = "n",
+       cex = .85)
 
 # Calibration measures ICI, E50, E90 based on secondary logistic regression
 res_calmeas <-
