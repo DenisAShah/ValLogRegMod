@@ -286,7 +286,7 @@ options(datadist = NULL)
 
 The coefficients of the models indicated that positive tumor teratoma, elevated prechemoterapy AFP levels, elevated prechemoterapy HCG levels, postchemotherapy mass size (mm) (expressed in square root) are associated with higher risk to residual tumor after resection. Reduction in mass size is associated with a reduced risk to have residual tumor after resection. 
 
-### 1.5 Plot of predictors vs estimated in the validation data
+### 1.3 Plot of predictors vs estimated in the validation data
 
 To get further insight into the effect of the covariates, we plot the covariate values observed in the validation set against the estimated absolute risk of having residual tumor after resection. This gives an idea of the size of the effects.
 
