@@ -1,6 +1,6 @@
 # Assessing the performance of prediction models with binary outcomes: a framework for some traditional and novel measures 
 
-R Code repository for the manuscript ['Assessing the performance of prediction models: a framework for some traditional and novel measures'](https://journals.lww.com/epidem/Fulltext/2010/01000/Assessing_the_Performance_of_Prediction_Models__A.22.aspx) by Steyerberg et al. (2010). We provided how to develop and validate a risk prediction model for binary outcomes with additional and more recent updates about performance assessment.
+R Code repository for the manuscript ['Assessing the performance of prediction models: a framework for some traditional and novel measures'](https://journals.lww.com/epidem/Fulltext/2010/01000/Assessing_the_Performance_of_Prediction_Models__A.22.aspx) by Steyerberg et al. (2010). We provided how to develop and validate a risk prediction model for binary outcomes using logistic regression with additional and more recent updates about performance assessment.
 
 
 
