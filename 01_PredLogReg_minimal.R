@@ -158,7 +158,7 @@ legend(x = .02, y = 1.2,
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
        bty = "n",
-       seg.len = .5,
+       seg.len = 1,
        cex = .50,
        x.intersp = .5,
        y.intersp = .5)
