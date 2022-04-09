@@ -152,16 +152,16 @@ segments(
   x1 = bins[freqs > 0], 
   y1 = freqs_rescaled
 )
-legend(x = .05, y = .9,
+legend(x = .02, y = 1.2,
        c("Ideal", "Lowess", "Logistic", "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
        bty = "n",
        seg.len = .5,
-       cex = .60,
+       cex = .50,
        x.intersp = .5,
-       y.intersp = .5 )
+       y.intersp = .5)
 
 
 # Calibration measures ICI, E50, E90 based on secondary logistic regression
