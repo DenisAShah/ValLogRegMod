@@ -80,6 +80,15 @@ res_cal <- matrix(
 res_cal
 
 ## Calibration plot
+# First, prepare histogram of estimated risks for x-axis
+spike_bounds <- c(0, 0.20)
+bin_breaks <- seq(0, 1, length.out = 100 + 1)
+freqs <- table(cut(vdata$pred, breaks = bin_breaks))
+bins <- bin_breaks[-1]
+freqs_valid <- freqs[freqs > 0]
+freqs_rescaled <- spike_bounds[1] + (spike_bounds[2] - spike_bounds[1]) * 
+  (freqs_valid - min(freqs_valid)) / (max(freqs_valid) - min(freqs_valid))
+
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
                family = binomial,
@@ -105,7 +114,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(lowess(vdata$pred, vdata$y, iter = 0),
      type = "l",
      xlim = c(0, 1),
-     ylim = c(0, 1),
+     ylim = c(-.1, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",
@@ -115,16 +124,22 @@ lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
 lines(dt_cal$pred, dt_cal$lower, lwd = 2, lty = 3)
 lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
 abline(a = 0, b = 1, col = "gray")
-legend(x = .6, y = .65,
+segments(
+  x0 = bins[freqs > 0], 
+  y0 = spike_bounds[1], 
+  x1 = bins[freqs > 0], 
+  y1 = freqs_rescaled
+)
+legend(x = .02, y = 1.2,
        c("Ideal", "Lowess", "Logistic", "95% confidence interval"),
        lwd = c(1, 2, 2, 2),
        lty = c(1, 1, 2, 3),
        col = c("gray", "black", "black", "black"),
        bty = "n",
        seg.len = .5,
-       cex = .60,
+       cex = .50,
        x.intersp = .5,
-       y.intersp = .5 )
+       y.intersp = .5)
 
 # Calibration measures ICI, E50, E90 based on secondary logistic regression
 res_calmeas <-
