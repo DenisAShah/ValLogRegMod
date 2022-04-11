@@ -1,4 +1,4 @@
-Validation of logistic regression risk prediction models
+Development and validation of logistic regression risk prediction models
 ================
 
 -   [Steps](#steps)
@@ -991,7 +991,7 @@ Discrimination slope
 0.27
 </td>
 <td style="text-align:right;">
-0.34
+0.33
 </td>
 <td style="text-align:right;">
 0.29
@@ -1006,7 +1006,7 @@ NA
 0.24
 </td>
 <td style="text-align:right;">
-0.19
+0.18
 </td>
 <td style="text-align:right;">
 0.29
