@@ -1,5 +1,5 @@
 ---
-title: "Validation of logistic regression risk prediction models"
+title: "Development and validation of logistic regression risk prediction models"
 always_allow_html: true
 output:
   github_document:
