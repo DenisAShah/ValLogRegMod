@@ -201,7 +201,7 @@ an observation given a predictor variable X), is:
 By taking the logarithm of both sides, the formula becomes a linear
 combination of predictors:
 
-<img src="https://render.githubusercontent.com/render/math?math=\sf{logit(p)%20%3D%20log(\frac{p}{1-p})%20%3D%20%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p}">
+<img src="https://render.githubusercontent.com/render/math?math=\huge{\sf{logit(p)%20%3D%20log(\frac{p}{1-p})%20%3D%20%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p}}">
 
 <details>
 <summary>
