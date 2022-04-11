@@ -65,7 +65,7 @@ More details about development and validation data are provided in the manuscrip
 #### Descriptive statistics
 
 ```{r, import}
-vsel <- vdata |> select(-patkey)
+vsel <- vdata |> select(-patkey, -lnldhst)
 
 vsel$tum_res <- factor(vsel$tum_res,
                         levels = c(0, 1),
@@ -78,6 +78,7 @@ label(vsel$prehcg) <- "Elevated Prechemotherapy HCG"
 label(vsel$sqpost) <- "Square root of postchemotherapy mass size"
 label(vsel$reduc10) <- "Reduction in mass size per 10%"
 units(vsel$sqpost) <- "mm"
+vsel$sqpost <- as.numeric(vsel$sqpost)
 ```
 
 
@@ -89,7 +90,7 @@ gtsummary::tbl_summary(
     sqpost ~ 
       "Square root of postchemotherapy mass size (mm)", 
     reduc10 ~ "Reduction in mass size per 10%"),
-  type = all_continuous() ~ "continuous2",
+  type = c(sqpost, reduc10) ~ "continuous2",
   statistic = all_continuous() ~ c(
      "{mean} ({sd})",
      "{median} ({min}, {max})"
@@ -99,7 +100,6 @@ gtsummary::tbl_summary(
   kableExtra::kable_styling("striped")
 
 ```
-
 
 
 ## Goal 1 - Assessing performance of a logistic regression risk prediction model
