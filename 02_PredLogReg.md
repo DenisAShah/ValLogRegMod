@@ -142,58 +142,18 @@ Square root of postchemotherapy mass size (mm)
 </tr>
 <tr>
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
-1.4142135623731
+Mean (SD)
 </td>
 <td style="text-align:left;">
-2 (0.7%)
+7.79 (3.08)
 </td>
 </tr>
 <tr>
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
-2.96647939483827
+Median (Range)
 </td>
 <td style="text-align:left;">
-7 (2.6%)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-5.3103672189407
-</td>
-<td style="text-align:left;">
-112 (41%)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-8.02496105909555
-</td>
-<td style="text-align:left;">
-81 (30%)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-10.5403984744411
-</td>
-<td style="text-align:left;">
-39 (14%)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-12.8452325786651
-</td>
-<td style="text-align:left;">
-24 (8.8%)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-17.3205080756888
-</td>
-<td style="text-align:left;">
-8 (2.9%)
+8.02 (1.41, 17.32)
 </td>
 </tr>
 <tr>
@@ -217,37 +177,6 @@ Median (Range)
 </td>
 <td style="text-align:left;">
 1 (-15, 10)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Ln of standardised prechemo LDH
-</td>
-<td style="text-align:left;">
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-Mean (SD)
-</td>
-<td style="text-align:left;">
-NA (NA)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-Median (Range)
-</td>
-<td style="text-align:left;">
-NA (Inf, -Inf)
-</td>
-</tr>
-<tr>
-<td style="text-align:left;padding-left: 2em;" indentlevel="1">
-Unknown
-</td>
-<td style="text-align:left;">
-273
 </td>
 </tr>
 </tbody>
