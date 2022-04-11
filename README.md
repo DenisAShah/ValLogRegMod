@@ -8,7 +8,7 @@ The repository contains the following code:
 
 + Minimal and essential [code](https://github.com/danielegiardiello/ValLogRegMod/blob/main/01_PredLogReg_minimal.R) to develop and validate a risk prediction model with binary outcomes when both development and validation data are available. People with basic or low statistical knowledge and basic R programming knowledge are encouraged to use these files. **To reproduce the main results of the manuscript, this script is sufficient**.  
 
-+ Minimal and essential [code](https://github.com/danielegiardiello/ValLogRegMod/blob/main/02_PredLogReg.R) to validate a risk prediction model in a external data when model equation of a developed risk prediction model is available. 
++ Minimal and essential [code](https://github.com/danielegiardiello/ValLogRegMod/blob/main/02_PredLogReg_minimal.R) to validate a risk prediction model in a external data when model equation of a developed risk prediction model is available. A more extensive and elaborated output is [here](https://github.com/danielegiardiello/ValLogRegMod/blob/main/02_PredLogReg.md) and the corresponding .Rmd source code is [here](https://github.com/danielegiardiello/ValLogRegMod/blob/main/02_PredLogReg.Rmd)
 
 + Extensive output and [code](https://github.com/danielegiardiello/ValLogRegMod/blob/main/03_PredLogReg.md) to develop and validate a risk prediction model with a binary outcome. The .Rmd source code is [here](https://github.com/danielegiardiello/ValLogRegMod/blob/main/03_PredLogReg.Rmd). People with advanced knowledge in statistics are encouraged to use these files.
 
