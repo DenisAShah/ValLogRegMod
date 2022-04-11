@@ -597,7 +597,7 @@ kable(res_ov) |>
 ```
 
 
-## Goal 3 -  Clinical utility
+## Goal 2 -  Clinical utility
 Discrimination and calibration measures are essential to assess the prediction performance but insufficient to evaluate the potential clinical utility of a risk prediction model for decision making. When new markers are available, clinical utility assessment evaluates whether the extended model helps to improve decision making.  
 Clinical utility is measured by the net benefit that includes the number of true positives and the number of false positives.
 Generally, in medicine, clinicians accepts to treat a certain number of patients for which interventions are unnecessary to be event free for a given time horizon. So, false negatives (the harm of not being event free for a given time horizon) are more important than false positives (the harm of unnecessary interventions). Thus, net benefit is the number of true positives classifications minus the false positives classifications weighted by a factor related to the harm of not preventing the event versus unnecessary interventions. The weighting is derived from the threshold probability to the event of interest (e.g. residual tumor). For example, a threshold of 20% implies that additional interventions for 4 patients of whom one would have experience the event if untreated is acceptable (thus treating 3 unnecessary patients). This strategy is compared with the strategies of treat all and treat none patients. If overtreatment is harmful, a higher threshold should be used. 
