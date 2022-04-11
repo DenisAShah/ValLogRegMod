@@ -18,7 +18,7 @@ Validation of logistic regression risk prediction models
         -   [2.2.3 Moderate calibration](#223-moderate-calibration)
     -   [2.3 Overall performance
         measures](#23-overall-performance-measures)
--   [Goal 3 - Clinical utility](#goal-3---clinical-utility)
+-   [Goal 2 - Clinical utility](#goal-2---clinical-utility)
 -   [Reproducibility ticket](#reproducibility-ticket)
 
 ## Steps
@@ -922,7 +922,7 @@ scaled Brier (IPA)
 </tbody>
 </table>
 
-## Goal 3 - Clinical utility
+## Goal 2 - Clinical utility
 
 Discrimination and calibration measures are essential to assess the
 prediction performance but insufficient to evaluate the potential
