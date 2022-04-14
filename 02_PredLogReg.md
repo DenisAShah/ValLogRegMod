@@ -196,7 +196,7 @@ possible values: 0 or 1, yes or no, diseased or non-diseased.
 The standard logistic regression function, for predicting the outcome of
 an observation given a predictor variable X), is:
 
-<img src="https://render.githubusercontent.com/render/math?math=\huge{\sf{\hat{p}%3D%20\frac{exp(y)}{1+exp(y)}%20%3D%20\frac{exp(%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p)}{1+exp(%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p)}}}">
+<img src="https://render.githubusercontent.com/render/math?math=\huge{\sf{\hat{p}%3D%20\frac{exp(y)}{1%2Bexp(y)}%20%3D%20\frac{exp(%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p)}{1%2Bexp(%5Cbeta_0%2B%5Cbeta_1X_1%2B%5Cbeta_2X_2%2B%5Cbeta_3X_3%2B%5Ccdots%2B%5Cbeta_pX_p)}}}">
 
 By a bit of manipulation, it can be demonstrated that, the formula
 becomes a linear combination of predictors:
