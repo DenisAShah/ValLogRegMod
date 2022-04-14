@@ -988,13 +988,13 @@ Discrimination slope
 0.30
 </td>
 <td style="text-align:right;">
-0.27
+0.28
 </td>
 <td style="text-align:right;">
 0.33
 </td>
 <td style="text-align:right;">
-0.29
+0.30
 </td>
 <td style="text-align:right;">
 NA
@@ -1006,10 +1006,10 @@ NA
 0.24
 </td>
 <td style="text-align:right;">
-0.18
+0.20
 </td>
 <td style="text-align:right;">
-0.29
+0.30
 </td>
 </tr>
 </tbody>
@@ -1227,9 +1227,11 @@ for the y-axis. Smoothing techniques can be used to estimate the
 observed probabilities of the outcome (p(y=1)) in relation to the
 predicted probabilities, e.g. using the lowess algorithm. The observed
 probabilities can be also estimated using a secondary logistic
-regression model using the predicted probability as predictor modelled
-with splines. We may however expect that the specific type of smoothing
-may affect the graphical impression, especially in smaller data sets.
+regression model using the predicted probability as a covariate. We can
+assume linearity or a more flexible relation between the covariate and
+the observed probabilties using, for example, splines. We may however
+expect that the specific type of smoothing may affect the graphical
+impression, especially in smaller data sets.
 
 <details>
 <summary>
@@ -1497,6 +1499,104 @@ function to calculate the absolute difference between the estimated
 observed and predicted probabilities. Another nice function to provide
 the calibration plot and the corresponding performance measures is
 `rms::val.prob()`. Another alternative is `riskRegression::Score()`.
+
+More flexible, nonlinear, calibration curve can be considered using the
+‘secondary’ logistic regression using splines transformations of the
+predicted probabilities. Here we provide an example using a five-knot
+restricted cubic splines using `rms::rcs()`.
+
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` r
+# Models
+dd <- datadist(rdata, adjto.cat = "first")
+options(datadist = "dd")
+fit_lrm <- lrm(tum_res ~ 
+               ter_pos + preafp + prehcg + 
+               sqpost + reduc10,
+               data = rdata, x = T, y = T)
+options(datadist = NULL)
+
+## Calibration plot
+# First, prepare histogram of estimated risks for x-axis
+spike_bounds <- c(0, 0.20)
+bin_breaks <- seq(0, 1, length.out = 100 + 1)
+freqs <- table(cut(vdata$pred, breaks = bin_breaks))
+bins <- bin_breaks[-1]
+freqs_valid <- freqs[freqs > 0]
+freqs_rescaled <- spike_bounds[1] + (spike_bounds[2] - spike_bounds[1]) * (freqs_valid - min(freqs_valid)) / (max(freqs_valid) - min(freqs_valid))
+
+vdata$y <- as.numeric(vdata$tum_res) - 1
+vdata$pred <- predict(fit_lrm,
+                      newdata = vdata,
+                      type = "fitted.ind")
+
+# Calibration based on a secondary logistic regression using 5-knot rcs
+fit_cal <- glm(y ~ rcs(pred, 5),
+               x = T,
+               y = T,
+               data = vdata)
+# NOTE: we can also model using splines (e.g. y ~ rcs(pred, 5),
+# restricted cubic splies with five knots
+
+cal_obs <- predict(fit_cal,  
+                   type = "response",
+                   se.fit = TRUE)
+alpha <- .05
+dt_cal <- cbind.data.frame("obs" = cal_obs$fit,
+                           
+                           "lower" = 
+                             cal_obs$fit - 
+                             qnorm(1 - alpha / 2)*cal_obs$se.fit,
+                           
+                           "upper" = cal_obs$fit + 
+                             qnorm(1 - alpha / 2)*cal_obs$se.fit,
+                           
+                           "pred" = vdata$pred)
+dt_cal <- dt_cal[order(dt_cal$pred),]
+
+cal_lowess <- lowess(vdata$pred, vdata$y, iter = 0)
+par(xaxs = "i", yaxs = "i", las = 1)
+plot(cal_lowess,
+     type = "l",
+     xlim = c(0, 1),
+     ylim = c(-.1, 1),
+     xlab = "Predicted probability",
+     ylab = "Actual probability",
+     bty = "n",
+     lwd = 2,
+     main = "Calibration plot")
+lines(dt_cal$pred, dt_cal$obs, lwd = 2, lty = 2)
+lines(dt_cal$pred, dt_cal$lower, lwd = 2, lty = 3)
+lines(dt_cal$pred, dt_cal$upper, lwd = 2, lty = 3)
+segments(
+  x0 = bins[freqs > 0], 
+  y0 = spike_bounds[1], 
+  x1 = bins[freqs > 0], 
+  y1 = freqs_rescaled
+)
+abline(a = 0, b = 1, col = "gray")
+legend("topleft",
+       c("Ideal", "Non parametric (Lowess)", 
+         "Logistic",
+         "95% confidence interval"),
+       lwd = c(1, 2, 2, 2),
+       lty = c(1, 1, 2, 3),
+       col = c("gray", "black", "black", "black"),
+       bty = "n",
+       cex = .85)
+```
+
+</details>
+
+<img src="imgs/03_PredLogReg/moder_flex_cal-1.png" width="672" style="display: block; margin: auto;" />
+
+The corresponding calibration measures ICI, E50, and E90 may be
+calculated based on the estimated predicted probabilities using the a
+more flexible ‘secondary’ logistic regression model.
 
 ### 2.3 Overall performance measures
 
