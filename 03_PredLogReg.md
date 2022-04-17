@@ -988,13 +988,13 @@ Discrimination slope
 0.30
 </td>
 <td style="text-align:right;">
-0.28
+0.27
 </td>
 <td style="text-align:right;">
 0.33
 </td>
 <td style="text-align:right;">
-0.30
+0.29
 </td>
 <td style="text-align:right;">
 NA
@@ -1009,7 +1009,7 @@ NA
 0.20
 </td>
 <td style="text-align:right;">
-0.30
+0.28
 </td>
 </tr>
 </tbody>
@@ -1264,6 +1264,7 @@ vdata$pred <- predict(fit_lrm,
 
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
+               family = binomial,
                x = T,
                y = T,
                data = vdata)
@@ -1345,6 +1346,7 @@ numsum_boot <- function(split) {
   vcal <- glm(y ~ pred,
               x = T,
               y = T,
+              family = binomial,
               data = analysis(split)
 ) 
  
@@ -1459,31 +1461,31 @@ Upper.95
 External data
 </td>
 <td style="text-align:right;">
-0.03
-</td>
-<td style="text-align:right;">
-0.01
-</td>
-<td style="text-align:right;">
-0.07
-</td>
-<td style="text-align:right;">
-0.03
-</td>
-<td style="text-align:right;">
-0.01
-</td>
-<td style="text-align:right;">
-0.07
-</td>
-<td style="text-align:right;">
 0.04
 </td>
 <td style="text-align:right;">
-0.01
+0.03
 </td>
 <td style="text-align:right;">
-0.16
+0.08
+</td>
+<td style="text-align:right;">
+0.03
+</td>
+<td style="text-align:right;">
+0.02
+</td>
+<td style="text-align:right;">
+0.07
+</td>
+<td style="text-align:right;">
+0.08
+</td>
+<td style="text-align:right;">
+0.06
+</td>
+<td style="text-align:right;">
+0.15
 </td>
 </tr>
 </tbody>
