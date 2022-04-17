@@ -684,6 +684,7 @@ vdata$pred <- predict(fit_lrm,
 
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
+               family = binomial,
                x = T,
                y = T,
                data = vdata)
@@ -765,6 +766,7 @@ numsum_boot <- function(split) {
   vcal <- glm(y ~ pred,
               x = T,
               y = T,
+              family = binomial,
               data = analysis(split)
 ) 
  
