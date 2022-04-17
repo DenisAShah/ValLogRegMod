@@ -125,6 +125,7 @@ fig, ax = plt.subplots()
 ax.plot(df_cal.pred, df_cal.obs, "--", label = "Logistic")
 ax.legend(loc = "best")
 plt.show()
+# NOTE: work in progress
 
 
 # Calibration metrics based on a secondary logistic regression model
@@ -146,5 +147,5 @@ bs_lrm
 # Scaled Brier Score
 
 # Clinical utility ------
-import dcurves
+# NOTE: work in progress
 
