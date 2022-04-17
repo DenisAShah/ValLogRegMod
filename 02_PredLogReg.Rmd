@@ -343,6 +343,7 @@ vdata$y <- as.numeric(vdata$tum_res) - 1
 
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
+               family = binomial,
                x = T,
                y = T,
                data = vdata)
@@ -417,6 +418,7 @@ numsum_boot <- function(split) {
  
 # Estimate actual risk - basic model
   vcal <- glm(y ~ pred,
+              family = binomial,
               x = T,
               y = T,
               data = analysis(split)
