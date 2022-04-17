@@ -127,6 +127,7 @@ fit_lowess = lowess(val_out.y_val,
                     frac = 2/3,
                     it = 0) # same f and iter parameters as R
 
+# Create df for calibration plot based on secondary log reg
 df_cal = pd.DataFrame({
     'obs' :  res_moderate_cal.predict(val_out[["intercept", "pred_val"]]),
     'pred' : val_out.pred_val
