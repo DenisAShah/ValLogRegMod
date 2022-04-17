@@ -61,9 +61,9 @@ pred_val = np.exp(lp) / (1 + np.exp(lp))
 
 # Discrimination -------------------
 # C-statistic
+import lifelines
+from lifelines.utils import concordance_index
 
-
-# Calibration --------------
 # Create dataframe val_out containing all info useful
 # to assess calibration
 # y_val = outcome of the validation data
@@ -74,6 +74,15 @@ val_out =  pd.DataFrame({'y_val': vdata["tum_res"],
                          'pred_val' : pred_val})                      
 val_out['intercept'] = 1.0 # Add intercept
 
+# Estimating c-statistic
+concordance_index(val_out.y_val, val_out.lp_val)
+
+# Discrimination slope
+val_out_group = val_out.groupby("y_val").mean()
+dslope = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
+dslope
+
+# Calibration --------------
 
 # Calibration intercept (calibration-in-the-large)
 # df_cal_int = pd.concat(y_val, lp_val)
@@ -83,7 +92,7 @@ cal_int = smf.GLM(val_out.y_val,
                   offset = val_out.lp_val)
 res_cal_int = cal_int.fit()
 res_cal_int.summary()
-res_cal_int.params[0]
+
 
 # Calibration slope
 cal_slope = smf.GLM(val_out.y_val, 
@@ -137,3 +146,5 @@ bs_lrm
 # Scaled Brier Score
 
 # Clinical utility ------
+import dcurves
+
