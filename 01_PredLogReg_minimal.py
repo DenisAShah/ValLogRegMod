@@ -65,7 +65,7 @@ import lifelines
 from lifelines.utils import concordance_index
 
 # Create dataframe val_out containing all info useful
-# to assess calibration
+# to assess prediction performance
 # y_val = outcome of the validation data
 # lp = linear predictor calculated in the validation data
 # pred_val = estimated predicted probability in the validation data
