@@ -7,29 +7,36 @@ import matplotlib.pyplot as plt
 
 # Get work directory
 # os.getcwd()
-url = 'https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv'
+# url = 'https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv'
 file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.csv"
 file_vdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/vdata.csv"
 rdata = pd.read_csv(file_rdata)
 vdata = pd.read_csv(file_vdata)
-print(rdata.head(5)) # print the first five rows
-print(vdata.head(5)) # print the first five rows
-rdata.info() # inspect data as in R str()
-vdata.info() # inspect data as in R str()
 
-## Data manipulation ---
+# Inspect data:
+# print(rdata.head(5)) # print the first five rows
+# print(vdata.head(5)) # print the first five rows
+# rdata.info() # inspect data as in R str()
+# vdata.info() # inspect data as in R str()
+
+## Data manipulation ----
 # Development data 
 # Converting categorical variables to dummies
-rdata = pd.get_dummies(data = rdata, columns = ["ter_pos", "preafp", "prehcg"])
+rdata = pd.get_dummies(data = rdata, 
+                       columns = ["ter_pos", "preafp", "prehcg"])
 # Dropping columns not needed
-rdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"], axis = 1, inplace = True)
-print(rdata.head(1))
+rdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"], 
+           axis = 1, inplace = True)
+print(rdata.head(1)) # check
 
 # Validation data 
-vdata = pd.get_dummies(data = vdata, columns=["ter_pos", "preafp", "prehcg"])
+vdata = pd.get_dummies(data = vdata, 
+                       columns=["ter_pos", "preafp", "prehcg"])
 # Dropping columns not needed
-vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"], axis = 1, inplace = True)
-print(vdata.head(1))
+vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"],
+            axis = 1,
+            inplace = True)
+print(vdata.head(1)) # check
 
 ## Fitting the logistic regression model ------------------
 # Logistic regression using statsmodels library
@@ -113,16 +120,26 @@ moderate_cal = smf.GLM(val_out.y_val,
 res_moderate_cal = moderate_cal.fit()
 res_moderate_cal.summary()
 
+# Lowess
+lowess = smf.nonparametric.lowess
+fit_lowess = lowess(val_out.y_val, 
+                    val_out.pred_val, 
+                    frac = 2/3,
+                    it = 0) # same f and iter parameters as R
+
 df_cal = pd.DataFrame({
     'obs' :  res_moderate_cal.predict(val_out[["intercept", "pred_val"]]),
     'pred' : val_out.pred_val
 })
 
 # Sorting
-df = df_cal.sort_values(by = ['pred'])
+df_cal = df_cal.sort_values(by = ['pred'])
 
 # Calibration plots
-plt.plot(df_cal.pred, df_cal.obs, "--", label = "Logistic")
+plt.plot(df_cal.pred, df_cal.obs, "--", 
+         label = "Logistic", color = "black")
+plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
+         color = "blue")
 plt.show()
 plt.clf()
 plt.cla()
@@ -149,7 +166,7 @@ bs_lrm = brier_score_loss(val_out.y_val, val_out.pred_val)
 
 
 # Scaled brier score
-# Develop null model 
+# Develop null model and estimate the Brier Score for the null model
 lrm_null = smf.GLM(val_out.y_val, val_out.intercept, 
                    family = smf.families.Binomial())                  
 result_lrm_null = lrm_null.fit()
@@ -212,6 +229,8 @@ plt.show()
 
 # Next steps: 
 # improve plotting, 
+# add flexible cal plot using loess and splines in the 
+# 'secondary' logistic model
 # add confidence bands of calibration plots
 # bootstrapping to provide confidence intervals of
 ## c-statistic, discrimination slope, Brier
