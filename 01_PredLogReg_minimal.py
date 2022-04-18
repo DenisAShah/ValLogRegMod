@@ -151,8 +151,7 @@ plt.close('all')
 # Calibration metrics based on a secondary logistic regression model
 cal_metrics = pd.DataFrame(
   {'ICI' : np.mean(abs(df_cal.obs - df_cal.pred)),
-   'E50' : np.median(abs(df_cal.obs - df_cal.pred, 
-                     interpolation = 'midpoint')),
+   'E50' : np.median(abs(df_cal.obs - df_cal.pred)),
    'E90' : np.quantile(abs(df_cal.obs - df_cal.pred), 
                        0.9, 
                        interpolation = 'midpoint')}, 
