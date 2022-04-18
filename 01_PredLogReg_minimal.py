@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 # Get work directory
 # os.getcwd()
-# url = 'https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv'
-file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.csv"
+# url = "https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv"
+file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.rds"
 file_vdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/vdata.csv"
 rdata = pd.read_csv(file_rdata)
 vdata = pd.read_csv(file_vdata)
