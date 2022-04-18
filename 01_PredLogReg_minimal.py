@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 
 # Get work directory
 # os.getcwd()
+# NOTE: please change the directories of the files containing data
 # url = "https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv"
-file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.rds"
+file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.csv"
 file_vdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/vdata.csv"
 rdata = pd.read_csv(file_rdata)
 vdata = pd.read_csv(file_vdata)
@@ -221,10 +222,10 @@ plt.plot(df_dca.threshold, df_dca.NB, "-", color = "black")
 plt.plot(df_dca.threshold, df_dca.NB_all, color = "gray")
 plt.xlim([0, 1])
 plt.ylim([-0.05, 0.8])
-plt.axhline(y = 0, color = 'black',  '-.')
 ax.set_xlabel("Threshold")
 ax.set_ylabel("Net Benefit")
 ax.set_title("Decision curve")
+plt.axhline(y = 0, linestyle = 'dashdot', color = 'black')
 plt.show()
 
 # Next steps: 
