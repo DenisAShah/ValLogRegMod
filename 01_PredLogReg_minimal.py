@@ -1,6 +1,7 @@
 # Load libraries and data
 import pandas as pd
 import numpy as np
+import scipy as sp
 import math
 import statsmodels.api as smf
 import matplotlib.pyplot as plt
@@ -120,7 +121,11 @@ res_cal_slope = cal_slope.fit()
 res_cal_slope.summary()
 res_cal_slope.params[1]
 
-# Calibration plot based on a secondary logistic regression model
+# Calibration plot 
+# Method used: The actual probability is estimated using a 'secondary' logistic regression model
+# using the predicted probabilities as a covariate.
+# Non-parametric curve (smooth using lowess) is also used as an alternative method.
+
 pred_val_cal = pd.DataFrame({'pred_val' : pred_val})
 pred_val_cal['intercept'] = 1.0
 moderate_cal = smf.GLM(val_out.y_val, 
@@ -128,6 +133,32 @@ moderate_cal = smf.GLM(val_out.y_val,
                        family = smf.families.Binomial())
 res_moderate_cal = moderate_cal.fit()
 res_moderate_cal.summary()
+
+# Estimated the standard error of the predicted probabilities
+# to add confidence bands to the calibration plot estimated using
+# a 'secondary' logistic regression model.
+# We need: 
+# a. matrix of variance and covariance of the 'secondary' logistic model
+res_moderate_cal.cov_params()
+
+# b. estimate the linear predictor as x*beta
+lp_cal = np.multiply(res_moderate_cal.params, 
+                     val_out[["intercept", "pred_val"]])
+lp_cal = lp_cal.sum(axis = 1)
+
+# Estimating the density 
+dlogis = sp.stats.logistic.pdf(lp_cal) # logistic density function = exp(-xb) / (1 + exp(-xb))**2)
+
+# Estimating the standard error of predicted probabilities
+se_fit = [0] * len(vdata)
+for j in range(len(vdata)):
+  se_fit[j] = np.dot(dlogis[j], val_out[["intercept", "pred_val"]].loc[j])
+  se_fit[j] = np.dot(se_fit[j], res_moderate_cal.cov_params())
+  se_fit[j] = np.dot(se_fit[j], val_out[["intercept", "pred_val"]].loc[j].T)
+  se_fit[j] = np.dot(se_fit[j], dlogis[j])
+se_fit = np.sqrt(se_fit)
+# NOTE: I would like to improve and use only matrix operators rather than
+# generalizing a single individual case using for loop
 
 # Lowess
 lowess = smf.nonparametric.lowess
@@ -137,9 +168,13 @@ fit_lowess = lowess(val_out.y_val,
                     it = 0) # same f and iter parameters as R
 
 # Create df for calibration plot based on secondary log reg
+alpha = 0.05
 df_cal = pd.DataFrame({
     'obs' :  res_moderate_cal.predict(val_out[["intercept", "pred_val"]]),
-    'pred' : val_out.pred_val
+    'pred' : val_out.pred_val,
+    'se_fit' : se_fit,
+    'lower_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) - sp.stats.norm.ppf(1 - alpha / 2) * se_fit,
+    'upper_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) + sp.stats.norm.ppf(1 - alpha / 2) * se_fit
 })
 
 # Sorting
@@ -147,6 +182,10 @@ df_cal = df_cal.sort_values(by = ['pred'])
 
 # Calibration plots
 plt.plot(df_cal.pred, df_cal.obs, "--", 
+         label = "Logistic", color = "black")
+plt.plot(df_cal.pred, df_cal.lower_95, "--", 
+         label = "Logistic", color = "black")
+plt.plot(df_cal.pred, df_cal.upper_95, "--", 
          label = "Logistic", color = "black")
 plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
          color = "blue")
