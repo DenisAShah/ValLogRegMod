@@ -85,12 +85,20 @@ val_out =  pd.DataFrame({'y_val': vdata["tum_res"],
 val_out['intercept'] = 1.0 # Add intercept
 
 # Estimating c-statistic
-concordance_index(val_out.y_val, val_out.lp_val)
+cstat = concordance_index(val_out.y_val, val_out.lp_val)
 
 # Discrimination slope
 val_out_group = val_out.groupby("y_val").mean()
 dslope = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
-dslope
+
+# Save results
+res_discr = pd.DataFrame(
+  {'C-statistic' : cstat,
+   'Discrimination Slope' : dslope},
+   index = [0]
+)
+
+res_discr
 
 # Calibration --------------
 
