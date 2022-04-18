@@ -283,10 +283,7 @@ plt.cla()
 plt.close('all')
 
 # Next steps: 
-# improve plotting, 
-# add flexible cal plot using loess and splines in the 
-# 'secondary' logistic model
-# add confidence bands of calibration plots
+# improve plotting and standard error of secondary logistic model 
 # bootstrapping to provide confidence intervals of
 ## c-statistic, discrimination slope, Brier
 
