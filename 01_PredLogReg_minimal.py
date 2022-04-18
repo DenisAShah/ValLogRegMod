@@ -235,6 +235,10 @@ ax.set_ylabel("Net Benefit")
 ax.set_title("Decision curve")
 plt.axhline(y = 0, linestyle = 'dashdot', color = 'black')
 plt.show()
+plt.show()
+plt.clf()
+plt.cla()
+plt.close('all')
 
 # Next steps: 
 # improve plotting, 
