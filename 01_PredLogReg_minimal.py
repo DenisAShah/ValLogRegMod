@@ -286,4 +286,5 @@ plt.close('all')
 # improve plotting and standard error of secondary logistic model 
 # bootstrapping to provide confidence intervals of
 ## c-statistic, discrimination slope, Brier
+# Secondary logistic model using non-linear terms e.g. splines.
 
