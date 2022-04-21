@@ -1,20 +1,34 @@
+# Install libraries
+# using python please use, for example: 
+# pip install pandas 
+
+# In R / R studio
+# pkgs <- c("reticulate")
+# vapply(pkgs, function(pkg) {
+#   if (!require(pkg, character.only = TRUE)) install.packages(pkg)
+#   require(pkg, character.only = TRUE, quietly = TRUE)
+# }, FUN.VALUE = logical(length = 1L))
+
+# py_install("pandas","numpy", "scipy", "statsmodels", "matplotlib")
+
+
 # Load libraries and data
 import pandas as pd
 import numpy as np
 import scipy as sp
-import math
 import statsmodels.api as smf
 import matplotlib.pyplot as plt
 
 # Get work directory
 # os.getcwd()
-# NOTE: please change the directories of the files containing data
-# url = "https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/rdata.csv"
-file_rdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/rdata.csv"
-file_vdata = "C:/Users/dgiardiello/Documents/GitHub/ValLogRegMod/Data/vdata.csv"
-rdata = pd.read_csv(file_rdata)
-vdata = pd.read_csv(file_vdata)
-
+url_rdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/rdata.csv"
+url_vdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/vdata.csv"
+# NOTE: go to 
+# "https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/vdata.csv"
+# then click" Raw" button to the upper right corner of the file preview.
+# Copy and paste the url link to have the raw gitHub version of the data
+rdata = pd.read_csv(url_rdata)
+vdata = pd.read_csv(url_vdata)
 # Inspect data:
 # print(rdata.head(5)) # print the first five rows
 # print(vdata.head(5)) # print the first five rows
