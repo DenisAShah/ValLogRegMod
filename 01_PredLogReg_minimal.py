@@ -9,7 +9,8 @@
 #   require(pkg, character.only = TRUE, quietly = TRUE)
 # }, FUN.VALUE = logical(length = 1L))
 
-# py_install("pandas","numpy", "scipy", "statsmodels", "matplotlib")
+# py_install("pandas","numpy", "scipy", "statsmodels", 
+#            "matplotlib", "sklearn")
 
 
 # Load libraries and data
@@ -18,6 +19,7 @@ import numpy as np
 import scipy as sp
 import statsmodels.api as smf
 import matplotlib.pyplot as plt
+import sklearn as sk
 
 # Get work directory
 # os.getcwd()
@@ -99,20 +101,52 @@ val_out =  pd.DataFrame({'y_val': vdata["tum_res"],
                          'pred_val' : pred_val})                      
 val_out['intercept'] = 1.0 # Add intercept
 
+# Creating bootstrap data of validation set to estimate bootstrap
+# confidence intervals of performance measures as
+# c-stat, discrimination slope and brier score
+# NOTE: I need to understand how to set up a random seed to reproduce
+# the same boostrapped data
+B = 2000
+bval_out = {}
+for j in range(B): 
+  bval_out[j] = sk.utils.resample(val_out, 
+      replace = True, 
+      n_samples = len(val_out))
+
+
 # Estimating c-statistic
 cstat = concordance_index(val_out.y_val, val_out.lp_val)
+
 
 # Discrimination slope
 val_out_group = val_out.groupby("y_val").mean()
 dslope = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
 
+# Bootstrap percentile
+cstat_boot = [0] * B
+val_bgroup = {}
+dslope_boot = [0] * B
+for j in range(B):
+  cstat_boot[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
+  val_bgroup[j] = bval_out[j].groupby("y_val").mean().pred_val
+  dslope_boot[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+
 # Save results
-res_discr = pd.DataFrame(
-  {'C-statistic' : cstat,
-   'Discrimination Slope' : dslope},
-   index = [0]
+res_discr = np.reshape(
+  (cstat,
+   np.percentile(cstat_boot, q = 2.5),
+   np.percentile(cstat_boot, q = 97.5), 
+   
+  dslope,
+   np.percentile(dslope_boot, q = 2.5),
+   np.percentile(dslope_boot, q = 97.5)),
+   
+   (2, 3)
 )
 
+res_discr = pd.DataFrame(res_discr, 
+                         columns = ["Estimate", "2.5 %", "97.5 %"],
+                         index = ["C-statistic", "Discrimination slope"])
 res_discr
 
 # Calibration --------------
@@ -247,15 +281,42 @@ val_out_null = pd.DataFrame(
 )
 bs_lrm_null = brier_score_loss(val_out_null.y_val, 
                                val_out_null.pred_null)
+                               
+# Bootstrap percentile confidence intervals
+B = 2000
+bval_out_null = {}
+boot_brier = [0] * B
+boot_brier_null = [0] * B
 
-# Brier score results
-overall_metrics = pd.DataFrame(
-  {'Brier Score' : bs_lrm,
-   'Scaled Brier' : (1 - (bs_lrm/bs_lrm_null))
-   },
-   index = [0]
+for j in range(B): 
+  bval_out_null[j] = sk.utils.resample(val_out_null, 
+      replace = True, 
+      n_samples = len(val_out_null))
+      
+  boot_brier[j] = brier_score_loss(bval_out[j].y_val, 
+                                   bval_out[j].pred_val),
+  
+  boot_brier_null[j] = brier_score_loss(bval_out_null[j].y_val, 
+                                   bval_out_null[j].pred_null)
+  
+scaled_brier_boot = 1 - (np.array(boot_brier)/np.array(boot_brier_null))
+
+# Overall performance results
+overall_metrics = np.reshape(
+  (bs_lrm,
+   np.percentile(boot_brier, q = 2.5),
+   np.percentile(boot_brier, q = 97.5), 
+   
+  1 - bs_lrm / bs_lrm_null,
+   np.percentile(scaled_brier_boot, q = 2.5),
+   np.percentile(scaled_brier_boot, q = 97.5)),
+   
+   (2, 3)
 )
 
+overall_metrics = pd.DataFrame(overall_metrics, 
+                               columns = ["Estimate", "2.5 %", "97.5 %"], 
+                               index = ["Brier Score", "Scaled Brier"])
 overall_metrics
 
 # Clinical utility ------
