@@ -79,7 +79,7 @@ cov["intercept"] = 1
 cov = cov[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
 
 # Calculating the linear predictor (X*beta)
-lp = np.multiply(coeff, cov)
+lp = coeff * cov
 lp = lp.sum(axis = 1)
 
 # Calculated the estimated predicted probabilities in the validation data
