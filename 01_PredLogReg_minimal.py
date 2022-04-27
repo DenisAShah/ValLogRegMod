@@ -189,9 +189,8 @@ res_moderate_cal.summary()
 res_moderate_cal.cov_params()
 
 # b. estimate the linear predictor as x*beta
-lp_cal = np.multiply(res_moderate_cal.params, 
-                     val_out[["intercept", "pred_val"]])
-lp_cal = lp_cal.sum(axis = 1)
+lp_cal = np.matmul(val_out[["intercept", "pred_val"]],
+                  res_moderate_cal.params)
 
 # Estimating the density 
 dlogis = sp.stats.logistic.pdf(lp_cal) # logistic density function = exp(-xb) / (1 + exp(-xb))**2)
