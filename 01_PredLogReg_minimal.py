@@ -60,7 +60,7 @@ print(vdata.head(1)) # check
 # Logistic regression using statsmodels library
 y = rdata["tum_res"]
 X = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
-X['intercept'] = 1.0
+X = X.assign(intercept = 1.0)
 
 lrm = smf.GLM(y, X, family = smf.families.Binomial())
 result_lrm = lrm.fit()
@@ -75,7 +75,7 @@ coeff = result_lrm.params
 
 # Save predictors of the validation model
 cov = vdata         
-cov["intercept"] = 1
+cov = cov.assign(intercept = 1.0)
 cov = cov[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
 
 # Calculating the linear predictor (X*beta)
@@ -83,6 +83,9 @@ lp = np.matmul(cov, coeff)
 
 # Calculated the estimated predicted probabilities in the validation data
 pred_val = np.exp(lp) / (1 + np.exp(lp))
+
+# Or just use:
+# result_lrm.predict(cov)
 
 
 # Discrimination -------------------
@@ -98,7 +101,7 @@ from lifelines.utils import concordance_index
 val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
                          'lp_val' : lp,
                          'pred_val' : pred_val})                      
-val_out['intercept'] = 1.0 # Add intercept
+val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 # Creating bootstrap data of validation set to estimate bootstrap
 # confidence intervals of performance measures as
