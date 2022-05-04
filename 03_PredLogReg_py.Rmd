@@ -114,13 +114,13 @@ categorical = ["tum_res","ter_pos","preafp", "prehcg"]
 nonnormal = ["sqpost","reduc10","lnldhst"]
 min_max = ["sqpost","reduc10","lnldhst"]
 
-labels = {'tum_res': 'Residual tumor  resection',
+labels = {'tum_res': 'Residual tumor resection',
  'ter_pos': 'Primary tumor teratoma positive', 
  'preafp' : 'Elevated prechemotherapy AFP',
  'prehcg' : 'Elevated Prechemotherapy HCG',
  'sqpost' : 'Square root of mass size',
  'reduc10': 'Reduction in mass size per 10%' ,
- 'lnldhst': 'log(LDH/upper limit of local normal value)'
+ 'lnldhst': 'log(LDH)'
 }
         
 Table1 = tb.TableOne(cdata, 
