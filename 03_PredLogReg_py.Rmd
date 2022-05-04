@@ -31,6 +31,9 @@ knitr::opts_chunk$set(
 
 ```{python, wdlib, message=FALSE, warning=FALSE, echo=TRUE}
 # Load libraries and data
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
 import pandas as pd
 import numpy as np
 import scipy as sp
@@ -39,9 +42,7 @@ import statsmodels.api as smf
 import matplotlib.pyplot as plt
 import sklearn as sk
 import seaborn as sns
-import warnings
-warnings.simplefilter(action = "ignore", category = FutureWarning)
-warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
+
 
 # Get work directory
 # os.getcwd()
@@ -113,11 +114,11 @@ categorical = ["tum_res","ter_pos","preafp", "prehcg"]
 nonnormal = ["sqpost","reduc10","lnldhst"]
 min_max = ["sqpost","reduc10","lnldhst"]
 
-labels = {'tum_res': 'Residual tumor at postchemotherapy resection',
+labels = {'tum_res': 'Residual tumor  resection',
  'ter_pos': 'Primary tumor teratoma positive', 
  'preafp' : 'Elevated prechemotherapy AFP',
  'prehcg' : 'Elevated Prechemotherapy HCG',
- 'sqpost' : 'Square root of postchemotherapy mass size',
+ 'sqpost' : 'Square root of mass size',
  'reduc10': 'Reduction in mass size per 10%' ,
  'lnldhst': 'log(LDH/upper limit of local normal value)'
 }
@@ -130,7 +131,8 @@ Table1 = tb.TableOne(cdata,
                   min_max = min_max,
                   rename = labels, 
                   pval = False,
-                  remarks = False)
+                  remarks = False,
+                  overall = False)
 
 print(Table1.tabulate(tablefmt = "fancy_grid"))   
 ```
