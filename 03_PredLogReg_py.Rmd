@@ -90,7 +90,7 @@ More details about development and validation data are provided in the manuscrip
 
 #### Descriptive statistics
 
-```{python, import, message=F, warning=F, comment=F, eval=F}
+```{python, import, message=F, warning=F, comment=F}
 # Get work directory
 # os.getcwd()
 url_rdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/rdata.csv"
