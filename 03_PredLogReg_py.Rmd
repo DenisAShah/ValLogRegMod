@@ -130,6 +130,7 @@ Table1 = tb.TableOne(cdata,
                   nonnormal = nonnormal, 
                   min_max = min_max,
                   rename = labels, 
+                  missing = False,
                   pval = False,
                   remarks = False,
                   overall = False)
