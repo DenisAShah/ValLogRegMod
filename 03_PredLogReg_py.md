@@ -5,6 +5,7 @@ Development and validation of logistic regression risk prediction models
     -   [Installing and loading packages and import
         data](#installing-and-loading-packages-and-import-data)
     -   [Data description](#data-description)
+        -   [Descriptive statistics](#descriptive-statistics)
 -   [Goal 1 - Develop a logistic regression risk prediction
     model](#goal-1---develop-a-logistic-regression-risk-prediction-model)
     -   [1.1 Check non-linearity of continuous
@@ -39,10 +40,22 @@ you if not already present, and c) load the packages into the session.
 import pandas as pd
 import numpy as np
 import scipy as sp
+import tableone as tb
 import statsmodels.api as smf
 import matplotlib.pyplot as plt
 import sklearn as sk
 import seaborn as sns
+```
+
+    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\seaborn\rcmod.py:82: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    ##   if LooseVersion(mpl.__version__) >= "3.0":
+    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\setuptools\_distutils\version.py:351: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    ##   other = LooseVersion(other)
+
+``` python
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
 
 # Get work directory
 # os.getcwd()
@@ -76,8 +89,6 @@ vdata = pd.get_dummies(data = vdata,
 vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"],
             axis = 1,
             inplace = True)
-            
-            # print(df.to_markdown()) to print as kable()?
 ```
 
 ### Data description
@@ -116,6 +127,36 @@ manuscript [“Assessing the performance of prediction models: a framework
 for some traditional and novel
 measures”](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by
 Steyerberg et al. (2010).
+
+#### Descriptive statistics
+
+    FALSE ╒══════════════════════════════════════════════════════════════╤═════╤═══════════╤══════════════════╤════════════════════╤═══════════════════╕
+    FALSE │                                                              │     │ Missing   │ Overall          │ Development data   │ Validation data   │
+    FALSE ╞══════════════════════════════════════════════════════════════╪═════╪═══════════╪══════════════════╪════════════════════╪═══════════════════╡
+    FALSE │ n                                                            │     │           │ 817              │ 544                │ 273               │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Residual tumor at postchemotherapy resection, n (%)          │ 0   │ 0         │ 321 (39.3)       │ 245 (45.0)         │ 76 (27.8)         │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │                                                              │ 1   │           │ 496 (60.7)       │ 299 (55.0)         │ 197 (72.2)        │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Primary tumor teratoma positive, n (%)                       │ No  │ 0         │ 356 (43.6)       │ 252 (46.3)         │ 104 (38.1)        │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │                                                              │ Yes │           │ 461 (56.4)       │ 292 (53.7)         │ 169 (61.9)        │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Elevated prechemotherapy AFP, n (%)                          │ No  │ 0         │ 254 (31.1)       │ 186 (34.2)         │ 68 (24.9)         │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │                                                              │ Yes │           │ 563 (68.9)       │ 358 (65.8)         │ 205 (75.1)        │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Elevated Prechemotherapy HCG, n (%)                          │ No  │ 0         │ 280 (34.3)       │ 205 (37.7)         │ 75 (27.5)         │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │                                                              │ Yes │           │ 537 (65.7)       │ 339 (62.3)         │ 198 (72.5)        │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Square root of postchemotherapy mass size, median [min,max]  │     │ 0         │ 5.3 [1.4,17.3]   │ 4.5 [1.4,17.3]     │ 8.0 [1.4,17.3]    │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ Reduction in mass size per 10%, median [min,max]             │     │ 0         │ 4.6 [-15.0,10.0] │ 5.2 [-13.8,10.0]   │ 1.1 [-15.0,9.7]   │
+    FALSE ├──────────────────────────────────────────────────────────────┼─────┼───────────┼──────────────────┼────────────────────┼───────────────────┤
+    FALSE │ log(LDH/upper limit of local normal value), median [min,max] │     │ 273       │ 0.3 [-1.1,2.8]   │ 0.3 [-1.1,2.8]     │ nan [nan,nan]     │
+    FALSE ╘══════════════════════════════════════════════════════════════╧═════╧═══════════╧══════════════════╧════════════════════╧═══════════════════╛
 
 ## Goal 1 - Develop a logistic regression risk prediction model
 
@@ -290,8 +331,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            5
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
-    ## Date:                Tue, 03 May 2022   Deviance:                       561.87
-    ## Time:                        16:40:10   Pearson chi2:                     520.
+    ## Date:                Wed, 04 May 2022   Deviance:                       561.87
+    ## Time:                        17:18:07   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -319,8 +360,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            6
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
-    ## Date:                Tue, 03 May 2022   Deviance:                       537.21
-    ## Time:                        16:40:11   Pearson chi2:                     546.
+    ## Date:                Wed, 04 May 2022   Deviance:                       537.21
+    ## Time:                        17:18:08   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
