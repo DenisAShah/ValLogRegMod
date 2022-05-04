@@ -34,10 +34,14 @@ knitr::opts_chunk$set(
 import pandas as pd
 import numpy as np
 import scipy as sp
+import tableone as tb
 import statsmodels.api as smf
 import matplotlib.pyplot as plt
 import sklearn as sk
 import seaborn as sns
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
 
 # Get work directory
 # os.getcwd()
@@ -71,8 +75,6 @@ vdata = pd.get_dummies(data = vdata,
 vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"],
             axis = 1,
             inplace = True)
-            
-            # print(df.to_markdown()) to print as kable()?
 ```
 
 ### Data description
@@ -84,6 +86,60 @@ We  first consider a data set with 544 patients to develop a prediction model th
 We then extend the developed model with the pre-chemotherapy level of the tumor marker lactate dehydrogenase (LDH). Since the validation data (vdata) did not have information about LDH, we assess the prediction performances of the basic model in the development (rdata) and in the validation data (vdata). 
 Thus, we loaded the development data (rdata) and the validation data (vdata).    
 More details about development and validation data are provided in the manuscript ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010).
+
+#### Descriptive statistics
+
+```{python, import, message=F, warning=F, comment=F}
+# Get work directory
+# os.getcwd()
+url_rdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/rdata.csv"
+url_vdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/vdata.csv"
+# NOTE: go to 
+# "https://github.com/danielegiardiello/ValLogRegMod/blob/main/Data/vdata.csv"
+# then click" Raw" button to the upper right corner of the file preview.
+# Copy and paste the url link to have the raw gitHub version of the data
+rsel = pd.read_csv(url_rdata)
+rsel = rsel.assign(dt = "Development data")
+
+vsel = pd.read_csv(url_vdata)
+vsel = vsel.assign(dt = "Validation data")
+
+# Combine data
+cdata = pd.concat([rsel, vsel], axis = 0)
+cdata = cdata.reset_index()
+columns = ["tum_res", "ter_pos", "preafp", "prehcg", "sqpost", "reduc10", "lnldhst"]
+groupby = ["dt"]
+categorical = ["tum_res","ter_pos","preafp", "prehcg"]
+nonnormal = ["sqpost","reduc10","lnldhst"]
+min_max = ["sqpost","reduc10","lnldhst"]
+
+labels = {'tum_res': 'Residual tumor at postchemotherapy resection',
+ 'ter_pos': 'Primary tumor teratoma positive', 
+ 'preafp' : 'Elevated prechemotherapy AFP',
+ 'prehcg' : 'Elevated Prechemotherapy HCG',
+ 'sqpost' : 'Square root of postchemotherapy mass size',
+ 'reduc10': 'Reduction in mass size per 10%' ,
+ 'lnldhst': 'log(LDH/upper limit of local normal value)'
+}
+        
+Table1 = tb.TableOne(cdata, 
+                  columns = columns, 
+                  categorical = categorical, 
+                  groupby = groupby, 
+                  nonnormal = nonnormal, 
+                  min_max = min_max,
+                  rename = labels, 
+                  pval = False,
+                  remarks = False)
+
+print(Table1.tabulate(tablefmt = "fancy_grid"))   
+```
+
+
+```{python, tab1_bis, warning=FALSE, message=FALSE}
+
+
+```
 
 ## Goal 1 - Develop a logistic regression risk prediction model
 
