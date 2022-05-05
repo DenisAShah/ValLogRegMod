@@ -139,11 +139,6 @@ print(Table1.tabulate(tablefmt = "fancy_grid"))
 ```
 
 
-```{python, tab1_bis, warning=FALSE, message=FALSE}
-
-
-```
-
 ## Goal 1 - Develop a logistic regression risk prediction model
 
 ### 1.1 Check non-linearity of continuous predictors
@@ -435,3 +430,105 @@ We here calculate:
 More details are in ["Assessing the performance of prediction models: a framework for some traditional and novel measures"](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by Steyerberg et al. (2010);
 
 
+<details>
+  <summary>Click to expand code</summary>
+```{python, discrimination, warning=FALSE, message=FALSE, echo=TRUE}
+
+## Fitting the logistic regression model ------------------
+# Logistic regression using statsmodels library
+y = rdata["tum_res"]
+X = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X = X.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+result_lrm.summary()
+
+
+# Save estimated predicted probabilites in the development data
+pred = result_lrm.predict(X)
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Save predictors of the validation model
+cov = vdata         
+cov = cov.assign(intercept = 1.0)
+cov = cov[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Calculating the linear predictor (X*beta)
+lp = np.matmul(cov, coeff)
+
+# Calculated the estimated predicted probabilities in the validation data
+pred_val = np.exp(lp) / (1 + np.exp(lp))
+
+# Or just use:
+# result_lrm.predict(cov)
+
+
+# Discrimination -------------------
+# C-statistic
+import lifelines 
+from lifelines.utils import concordance_index
+
+# Create dataframe val_out containing all info useful
+# to assess prediction performance
+# y_val = outcome of the validation data
+# lp = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp,
+                         'pred_val' : pred_val})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+# Creating bootstrap data of validation set to estimate bootstrap
+# confidence intervals of performance measures as
+# c-stat, discrimination slope and brier score
+# NOTE: I need to understand how to set up a random seed to reproduce
+# the same boostrapped data
+B = 2000
+bval_out = {}
+for j in range(B): 
+  bval_out[j] = sk.utils.resample(val_out, 
+      replace = True, 
+      n_samples = len(val_out))
+
+
+# Estimating c-statistic
+cstat = concordance_index(val_out.y_val, val_out.lp_val)
+
+
+# Discrimination slope
+val_out_group = val_out.groupby("y_val").mean()
+dslope = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
+
+# Bootstrap percentile
+cstat_boot = [0] * B
+val_bgroup = {}
+dslope_boot = [0] * B
+for j in range(B):
+  cstat_boot[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
+  val_bgroup[j] = bval_out[j].groupby("y_val").mean().pred_val
+  dslope_boot[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+
+# Save results
+res_discr = np.reshape(
+  (cstat,
+   np.percentile(cstat_boot, q = 2.5),
+   np.percentile(cstat_boot, q = 97.5), 
+   
+  dslope,
+   np.percentile(dslope_boot, q = 2.5),
+   np.percentile(dslope_boot, q = 97.5)),
+   
+   (2, 3)
+)
+
+res_discr = pd.DataFrame(res_discr, 
+                         columns = ["Estimate", "2.5 %", "97.5 %"],
+                         index = ["C-statistic", "Discrimination slope"])
+res_discr
+
+
+```
+</details>
