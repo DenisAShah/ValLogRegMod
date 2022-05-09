@@ -437,79 +437,135 @@ More details are in ["Assessing the performance of prediction models: a framewor
 ## Fitting the logistic regression model ------------------
 # Logistic regression using statsmodels library
 y = rdata["tum_res"]
-X = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
-X = X.assign(intercept = 1.0)
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
 
-lrm = smf.GLM(y, X, family = smf.families.Binomial())
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
 result_lrm = lrm.fit()
 result_lrm.summary()
 
+# Create dataframe dev_out and val_out containing all info useful
+# to assess prediction performance in the development and in the validation data
 
-# Save estimated predicted probabilites in the development data
-pred = result_lrm.predict(X)
+# Save estimated predicted probabilities in the development data
+pred_rdata = result_lrm.predict(X_rdata)
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = cov.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
 
 # Save coefficients of the developed model
 coeff = result_lrm.params
 
-# Save predictors of the validation model
-cov = vdata         
-cov = cov.assign(intercept = 1.0)
-cov = cov[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
-
 # Calculating the linear predictor (X*beta)
-lp = np.matmul(cov, coeff)
+lp_rdata = np.matmul(X_rdata, coeff)
+lp_vdata = np.matmul(X_vdata, coeff)
 
-# Calculated the estimated predicted probabilities in the validation data
-pred_val = np.exp(lp) / (1 + np.exp(lp))
+# Create the dataframe including all useful info 
+# y_dev = outcome of the development
+# lp_dev = linear predictor calculated in the developement data
+# pred_dev = estimated predicted probability in the development data
+dev_out =  pd.DataFrame({'y_dev': rdata["tum_res"], 
+                         'lp_dev' : lp_rdata,
+                         'pred_dev' : pred_rdata})                      
+dev_out = dev_out.assign(intercept = 1.0) # Add intercept
 
-# Or just use:
-# result_lrm.predict(cov)
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 
 # Discrimination -------------------
-# C-statistic
+
 import lifelines 
 from lifelines.utils import concordance_index
 
-# Create dataframe val_out containing all info useful
-# to assess prediction performance
-# y_val = outcome of the validation data
-# lp = linear predictor calculated in the validation data
-# pred_val = estimated predicted probability in the validation data
-val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
-                         'lp_val' : lp,
-                         'pred_val' : pred_val})                      
-val_out = val_out.assign(intercept = 1.0) # Add intercept
 
-# Creating bootstrap data of validation set to estimate bootstrap
-# confidence intervals of performance measures as
-# c-stat, discrimination slope and brier score
+## C-statistic ---
+cstat_rdata = concordance_index(dev_out.y_dev, dev_out.lp_dev) # development data
+cstat_vdata = concordance_index(val_out.y_val, val_out.lp_val) # validation data
+
+## Discrimination slope ---
+
+### Development data ----
+#### Apparent validation
+dev_out_group = dev_out.groupby("y_dev").mean()
+dslope_rdata = abs(dev_out_group.pred_dev[1] - dev_out_group.pred_dev[0])
+
+### Validation data ----
+val_out_group = val_out.groupby("y_val").mean()
+dslope_vdata = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
+
+#### Bootstrap percentile confidence intervals
+# Bootstrap confidence intervals for development and validation set
 # NOTE: I need to understand how to set up a random seed to reproduce
 # the same boostrapped data
 B = 2000
+bdev_out = {}
 bval_out = {}
+cstat_dev_b = [0] * B
+dev_bgroup = {}
+dslope_dev_b = [0] * B
+cstat_val_b = [0] * B
+val_bgroup = {}
+dslope_val_b = [0] * B
 for j in range(B): 
+  
+  bdev_out[j] = sk.utils.resample(dev_out, 
+      replace = True, 
+      n_samples = len(dev_out)) # bootstrapping development data
+      
   bval_out[j] = sk.utils.resample(val_out, 
       replace = True, 
-      n_samples = len(val_out))
-
-
-# Estimating c-statistic
-cstat = concordance_index(val_out.y_val, val_out.lp_val)
-
-
-# Discrimination slope
-val_out_group = val_out.groupby("y_val").mean()
-dslope = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
-
-# Bootstrap percentile
-cstat_boot = [0] * B
-val_bgroup = {}
-dslope_boot = [0] * B
-for j in range(B):
-  cstat_boot[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
+      n_samples = len(val_out)) # bootstrapping validation data
+  
+  # Bootstrapped discrimination measures - development data     
+  cstat_dev_b[j] = concordance_index(bdev_out[j].y_dev, bdev_out[j].lp_dev)
+  dev_bgroup[j] = bdev_out[j].groupby("y_dev").mean().pred_dev
+  dslope_dev_b[j] = abs(dev_bgroup[j][1] - dev_bgroup[j][0])
+  
+  # Bootstrapped discrimination measures - validation data  
+  cstat_val_b[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
   val_bgroup[j] = bval_out[j].groupby("y_val").mean().pred_val
-  dslope_boot[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+  dslope_val_b[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+
+#### Internal validation (optimism-corrected bootstrap)
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+B = 2000
+bdata = {}
+lrm_boot = {}
+coeff_boot = {}
+for j in range(B):
+  
+  bdata[j] = sk.utils.resample(rdata, 
+      replace = True, 
+      n_samples = len(rdata)) # bootstrapping development data
+      
+  bdata[j] = bdata[j].assign(intercept = 1.0)
+  
+  lrm_boot[j] = smf.GLM(bdata[j].tum_res, 
+                        bdata[j][["ter_pos_Yes", "preafp_Yes", 
+                                  "prehcg_Yes", "sqpost", 
+                                  "reduc10", "intercept"]], 
+                        family = smf.families.Binomial())
+                        
+  coeff_boot[j] = lrm_boot[j].fit().params
+
+
 
 # Save results
 res_discr = np.reshape(
