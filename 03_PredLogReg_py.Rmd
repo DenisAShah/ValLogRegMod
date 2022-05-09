@@ -544,7 +544,6 @@ X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]
 X_rdata = X_rdata.assign(intercept = 1.0)
 
 
-lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
 B = 2000
 bdata = {}
 lrm_boot = {}
