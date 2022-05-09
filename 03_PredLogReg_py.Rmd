@@ -564,6 +564,7 @@ for j in range(B):
                         family = smf.families.Binomial())
                         
   coeff_boot[j] = lrm_boot[j].fit().params
+  
 
 
 
