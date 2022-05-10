@@ -53,7 +53,6 @@ pacman::p_load(
 # Import data ------------------
 rdata <- readRDS(here::here("Data/rdata.rds"))
 vdata <- readRDS(here::here("Data/vdata.rds"))
-
 ```
 
 ### Data description
