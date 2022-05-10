@@ -29,6 +29,17 @@ knitr::opts_chunk$set(
 )
 ```
 
+```{r, wdlib, message=FALSE, warning=FALSE, echo=TRUE}
+# Use pacman to check whether packages are installed, if not load
+if (!require("pacman")) install.packages("pacman")
+library(pacman)
+
+pacman::p_load(
+  knitr,
+  kableExtra
+)
+```
+
 ```{python, wdlib, message=FALSE, warning=FALSE, echo=TRUE}
 # Load libraries and data
 import warnings
@@ -452,7 +463,7 @@ pred_rdata = result_lrm.predict(X_rdata)
 
 # Save predictors of the validation model
 X_vdata = vdata         
-X_vdata = cov.assign(intercept = 1.0)
+X_vdata = X_vdata.assign(intercept = 1.0)
 X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
 
 # Save estimated predicted probabilities in the validation data
@@ -546,45 +557,106 @@ X_rdata = X_rdata.assign(intercept = 1.0)
 
 B = 2000
 bdata = {}
+X_boot = {}
 lrm_boot = {}
 coeff_boot = {}
+lp_boot = {}
+lp_orig = {}
+pred_boot = {}
+pred_orig = {}
+cstat_boot = [0] * B
+cstat_orig = [0] * B
+boot_out_group = {}
+orig_out_group = {}
+dslope_boot = [0] * B
+dslope_orig = [0] * B
+
 for j in range(B):
   
+  # Predictors of original (development) data
+  X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+  X_rdata = X_rdata.assign(intercept = 1.0)
+  
+  # Bootstrapping development data
   bdata[j] = sk.utils.resample(rdata, 
       replace = True, 
       n_samples = len(rdata)) # bootstrapping development data
       
   bdata[j] = bdata[j].assign(intercept = 1.0)
   
-  lrm_boot[j] = smf.GLM(bdata[j].tum_res, 
-                        bdata[j][["ter_pos_Yes", "preafp_Yes", 
+  X_boot[j] =  bdata[j][["ter_pos_Yes", "preafp_Yes", 
                                   "prehcg_Yes", "sqpost", 
-                                  "reduc10", "intercept"]], 
-                        family = smf.families.Binomial())
-                        
-  coeff_boot[j] = lrm_boot[j].fit().params
+                                  "reduc10", "intercept"]]
   
+  # Logistic regression model in every bootstrapped data
+  lrm_boot[j] = smf.GLM(bdata[j].tum_res, X_boot[j], family = smf.families.Binomial())
+  coeff_boot[j] = lrm_boot[j].fit().params # coefficients
+  
+  # Linear predictor and predicted probabilities 
+  # in every bootstrapped model and in every bootstrapped data
+  lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
+  pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+  
+  # Linear predictor and predicted probabilities 
+  # in every bootstrapped model in every data
+  lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
+  pred_orig[j] = lrm_boot[j].fit().predict(X_rdata)
+  
+  # Discrimination --
+  
+  ## C-statistic --
+  cstat_boot[j] = concordance_index(bdata[j].tum_res, lp_boot[j]) 
+  cstat_orig[j] = concordance_index(rdata.tum_res, lp_orig[j]) 
+  cstat_diff = np.subtract(cstat_boot, cstat_orig)
+  cstat_opt = np.mean(cstat_diff)
+  
+  ## Discrimination slope --
+  boot_out_group[j] = pred_boot[j].groupby(bdata[j].tum_res).mean()
+  dslope_boot[j] = abs(boot_out_group[j][1] - boot_out_group[j][0])
+  
+  orig_out_group[j] = pred_orig[j].groupby(rdata.tum_res).mean()
+  dslope_orig[j] = abs(orig_out_group[j][1] - orig_out_group[j][0])
+  dslope_diff = np.subtract(dslope_boot, dslope_orig)
+  dslope_opt = np.mean(dslope_diff)
 
 
 
 # Save results
 res_discr = np.reshape(
-  (cstat,
-   np.percentile(cstat_boot, q = 2.5),
-   np.percentile(cstat_boot, q = 97.5), 
+  (cstat_rdata,
+   np.percentile(cstat_dev_b, q = 2.5),
+   np.percentile(cstat_dev_b, q = 97.5), 
    
-  dslope,
-   np.percentile(dslope_boot, q = 2.5),
-   np.percentile(dslope_boot, q = 97.5)),
+   cstat_rdata - cstat_opt,
+   None,
+   None,
    
-   (2, 3)
+   cstat_vdata,
+   np.percentile(cstat_val_b, q = 2.5),
+   np.percentile(cstat_val_b, q = 97.5),
+   
+   dslope_rdata,
+   np.percentile(dslope_dev_b, q = 2.5),
+   np.percentile(dslope_dev_b, q = 97.5),
+   
+   dslope_rdata - dslope_opt,
+   None,
+   None,
+   
+   dslope_vdata,
+   np.percentile(dslope_val_b, q = 2.5),
+   np.percentile(dslope_val_b, q = 97.5)),
+   
+   (2, 9)
 )
 
 res_discr = pd.DataFrame(res_discr, 
-                         columns = ["Estimate", "2.5 %", "97.5 %"],
+                         columns = np.tile(["Estimate", "2.5 %", "97.5 %"], 3) ,
                          index = ["C-statistic", "Discrimination slope"])
+                         
+print(res_discr.to_markdown())
 res_discr
-
-
 ```
 </details>
+
+
