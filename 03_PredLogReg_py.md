@@ -18,6 +18,9 @@ Development and validation of logistic regression risk prediction models
     prediction
     model](#goal-2---assessing-performance-of-a-logistic-regression-risk-prediction-model)
     -   [2.1 Discrimination](#21-discrimination)
+    -   [2.2 Calibration](#22-calibration)
+        -   [2.2.1 Mean calibration](#221-mean-calibration)
+        -   [2.2.2 Weak calibration](#222-weak-calibration)
 
 ## Steps
 
@@ -378,7 +381,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
     ## Date:                Wed, 11 May 2022   Deviance:                       561.87
-    ## Time:                        16:35:27   Pearson chi2:                     520.
+    ## Time:                        17:19:47   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -407,7 +410,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
     ## Date:                Wed, 11 May 2022   Deviance:                       537.21
-    ## Time:                        16:35:30   Pearson chi2:                     546.
+    ## Time:                        17:19:48   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -911,3 +914,177 @@ NULL
 </tr>
 </tbody>
 </table>
+
+C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78
+(95% CI: 0.73-0.84) in the development and validation data,
+respectively. Internal cross-validation based on optimism-corrected
+bootstrapping showed a C-statistic of 0.81.
+
+Discrimination slope was 0.30 (95% CI: 0.27-0.32), and 0.24 (95% CI:
+0.17-0.29) for the development and validation data, respectively.
+Internal cross-validation based on optimism-corrected bootstrapping
+showed a discrimination slope of 0.29.
+
+### 2.2 Calibration
+
+Calibration refers to the agreement between observed outcomes and
+predictions. For example, if we predict a 20% risk of residual tumor for
+a testicular cancer patient, the observed frequency of tumor should be
+approximately 20 out of 100 patients with such a prediction.
+
+Different level of calibration can be estimated: mean, weak, and
+moderate calibration according to the calibration hierarchy defined by
+Van Calster et
+al. [here](https://www.sciencedirect.com/science/article/pii/S0895435615005818).
+
+#### 2.2.1 Mean calibration
+
+Mean calibration refers how systematically the model might under- or
+over- predicts the actual risk.
+
+The mean calibration can be estimated:
+
+-   using the Observed and Expected ratio. The observed number of events
+    is the sum of the events (or cases) present in the data. The
+    expected is estimated summing the predicted probability of the event
+    estimated by the model. Ratio equals to 1 indicates perfect (mean)
+    calibration, values lower or greater than 1 indicate over- and
+    under- prediction, respectively.
+
+-   calibration intercept (or calibration-in-the-large): indicates the
+    extent that predictions are systematically too low or too high.
+
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+# Logistic regression using statsmodels library
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+
+# Calibration intercept (calibration-in-the-large) -------------
+# df_cal_int = pd.concat(y_val, lp_val)
+cal_int = smf.GLM(val_out.y_val, 
+                  val_out.intercept, 
+                  family = smf.families.Binomial(),
+                  offset = val_out.lp_val)
+res_cal_int = cal_int.fit()
+# np.float64(res_cal_int.params)
+# res_cal_int.conf_int()
+# np.float64(res_cal_int.conf_int()[0])
+
+
+# Observed/Expected ratio
+Obs = np.sum(val_out.y_val)
+Exp = np.sum(val_out.pred_val)
+OE = Obs / Exp
+alpha = 0.05
+res_OE = pd.DataFrame(
+  {"OE" : OE,
+   "lower": OE * np.exp(- sp.stats.norm.ppf(1 - alpha / 2) * np.power(1 / Obs, 0.5)),
+   "upper": OE * np.exp(sp.stats.norm.ppf(1 - alpha / 2) * np.power(1 / Obs, 0.5))
+   },
+   index=[0]
+)
+```
+
+</details>
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Estimate
+</th>
+<th style="text-align:right;">
+2.5 %
+</th>
+<th style="text-align:right;">
+97.5 %
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Calibration intercept
+</td>
+<td style="text-align:right;">
+-0.03
+</td>
+<td style="text-align:right;">
+-0.34
+</td>
+<td style="text-align:right;">
+0.28
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Discrimination slope
+</td>
+<td style="text-align:right;">
+0.99
+</td>
+<td style="text-align:right;">
+0.86
+</td>
+<td style="text-align:right;">
+1.14
+</td>
+</tr>
+</tbody>
+</table>
+
+Both calibration intercept and O/E ratio showed good mean calibration.
+The prediction model did not systematically over or underestimate the
+actual risk.
+
+#### 2.2.2 Weak calibration
+
+The term ‘weak’ refers to the limited flexibility in assessing
+calibration. We are essentially summarizing calibration of the observed
+proportions of outcomes versus predicted probabilities using only two
+parameters i.e. a straight line. In other words, perfect weak
+calibration is defined as mean calibration ratio and calibration slope
+of unity(or calibration intercept equals to zero). The calibration slope
+indicates the overall strength of the linear predictor (LP), which can
+be interpreted as the level of overfitting (slope \<1) or underfitting
+(slope>1). A value of slope smaller than 1 can also be interpreted as
+reflecting a need for shrinkage of regression coefficients in a
+prediction model.
