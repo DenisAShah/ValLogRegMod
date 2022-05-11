@@ -35,6 +35,32 @@ The following libraries are used in this file, the code chunk below will
 a) check whether you already have them installed, b) install them for
 you if not already present, and c) load the packages into the session.
 
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` r
+# Use pacman to check whether packages are installed, if not load
+if (!require("pacman")) install.packages("pacman")
+library(pacman)
+
+pacman::p_load(
+  reticulate,
+  knitr,
+  kableExtra
+)
+```
+
+</details>
+
+    ## Loading required package: pacman
+
+<details>
+<summary>
+Click to expand code
+</summary>
+
 ``` python
 # Load libraries and data
 import warnings
@@ -52,14 +78,6 @@ import seaborn as sns
 
 # Get work directory
 # os.getcwd()
-```
-
-    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\seaborn\rcmod.py:82: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
-    ##   if LooseVersion(mpl.__version__) >= "3.0":
-    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\setuptools\_distutils\version.py:351: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
-    ##   other = LooseVersion(other)
-
-``` python
 url_rdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/rdata.csv"
 url_vdata = "https://raw.githubusercontent.com/danielegiardiello/ValLogRegMod/main/Data/vdata.csv"
 # NOTE: go to 
@@ -91,6 +109,13 @@ vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"],
             axis = 1,
             inplace = True)
 ```
+
+</details>
+
+    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\seaborn\rcmod.py:82: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    ##   if LooseVersion(mpl.__version__) >= "3.0":
+    ## C:\Users\DGIARD~1\AppData\Local\Programs\Python\PYTHON~1\lib\site-packages\setuptools\_distutils\version.py:351: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    ##   other = LooseVersion(other)
 
 ### Data description
 
@@ -307,9 +332,28 @@ plt.close('all')
 
 <img src="imgs/03_PredLogReg_py/ff-1.png" style="display: block; margin: auto;" />
 
-    ## |    |   AIC without splines |   AIC with splines |
-    ## |---:|----------------------:|-------------------:|
-    ## |  0 |               573.871 |             574.55 |
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+AIC without splines
+</th>
+<th style="text-align:right;">
+AIC with splines
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+573.8713
+</td>
+<td style="text-align:right;">
+574.5499
+</td>
+</tr>
+</tbody>
+</table>
 
 Both the graphical comparison and the AIC comparison suggested no
 relevant departure from linear relations between the continuous
@@ -332,8 +376,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            5
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
-    ## Date:                Wed, 04 May 2022   Deviance:                       561.87
-    ## Time:                        17:39:35   Pearson chi2:                     520.
+    ## Date:                Wed, 11 May 2022   Deviance:                       561.87
+    ## Time:                        14:23:39   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -361,8 +405,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            6
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
-    ## Date:                Wed, 04 May 2022   Deviance:                       537.21
-    ## Time:                        17:39:37   Pearson chi2:                     546.
+    ## Date:                Wed, 11 May 2022   Deviance:                       537.21
+    ## Time:                        14:23:40   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -490,7 +534,7 @@ plt.close('all')
 
     ## (0.0, 1.2)
 
-<img src="imgs/03_PredLogReg_py/plot_risk-3.png" style="display: block; margin: auto;" />
+<img src="imgs/03_PredLogReg_py/plot_risk-1.png" style="display: block; margin: auto;" />
 
 ## Goal 2 - Assessing performance of a logistic regression risk prediction model
 
@@ -525,3 +569,9 @@ More details are in [“Assessing the performance of prediction models: a
 framework for some traditional and novel
 measures”](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3575184/) by
 Steyerberg et al. (2010);
+
+<details>
+<summary>
+Click to expand code
+</summary>
+</details>
