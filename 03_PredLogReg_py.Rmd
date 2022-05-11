@@ -29,18 +29,28 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r, wdlib, message=FALSE, warning=FALSE, echo=TRUE}
+<details>
+  <summary>Click to expand code</summary>
+```{r, wdlib_r, message=FALSE, warning=FALSE, eval=FALSE, echo=TRUE}
 # Use pacman to check whether packages are installed, if not load
 if (!require("pacman")) install.packages("pacman")
 library(pacman)
 
 pacman::p_load(
+  reticulate,
   knitr,
   kableExtra
 )
 ```
+</details>
 
-```{python, wdlib, message=FALSE, warning=FALSE, echo=TRUE}
+```{r, wdlib_r, warning=FALSE, fig.align='center', eval=TRUE}
+```
+
+
+<details>
+  <summary>Click to expand code</summary>
+```{python, wdlib, message=FALSE, warning=FALSE, eval=FALSE, echo=TRUE}
 # Load libraries and data
 import warnings
 warnings.simplefilter(action = "ignore", category = FutureWarning)
@@ -87,6 +97,10 @@ vdata = pd.get_dummies(data = vdata,
 vdata.drop(["ter_pos_No", "preafp_No", "prehcg_No"],
             axis = 1,
             inplace = True)
+```
+</details>
+
+```{python, wdlib, message=FALSE, warning=FALSE, eval=TRUE}
 ```
 
 ### Data description
@@ -298,9 +312,14 @@ df_aic = pd.DataFrame({
   index = [0]
 )
 
-print(df_aic.to_markdown())
+# print(df_aic.to_markdown())
 ```
 
+```{r, res_aic_r, fig.align='center'}
+library(reticulate)
+kable(py$df_aic, row.names = FALSE) |>
+  kable_styling("striped", position = "center")
+```
 Both the graphical comparison and the AIC comparison suggested no relevant departure from linear relations between the continuous predictors (square root of post-chemotherapy mass size and reduction in mass size) and the risk of residual tumor at post-chemotherapy resection.  
 
 ### 1.2 Examine the fit of the models
@@ -443,7 +462,7 @@ More details are in ["Assessing the performance of prediction models: a framewor
 
 <details>
   <summary>Click to expand code</summary>
-```{python, discrimination, warning=FALSE, message=FALSE, echo=TRUE}
+```{python, discrimination, warning=FALSE, message=FALSE, echo=TRUE, eval=FALSE, include=FALSE}
 
 ## Fitting the logistic regression model ------------------
 # Logistic regression using statsmodels library
@@ -548,12 +567,220 @@ for j in range(B):
   cstat_val_b[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
   val_bgroup[j] = bval_out[j].groupby("y_val").mean().pred_val
   dslope_val_b[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+  
+# Internal validation function
+    """
+    Calculate optimism-corrected bootstrap internal validation for c-statistic and 
+    discrimination slope.
+
+    @type  data: pandas.core.frame.DataFrame
+    @param data: data frame
+    @type  y:  str 
+    @param y:  variabile identifying the binary outcome
+    @type  X:  pandas.core.frame.DataFrame
+    @param X:  predictors including the intercept
+    @type  B:  integer
+    @param B:  number of bootstrap sample (default B = 2000)
+    @rtype:    pandas.core.frame.DataFrame 
+    @return:   pandas.core.frame.DataFrame including optimism-corrected bootstrap internal
+               validation prediction performance measures.
+    """
+
+def bootstrap_cv_lrm(data, y, X, B = 2000):
+  bdata = {}
+  X_boot = {}
+  lrm_boot = {}
+  coeff_boot = {}
+  lp_boot = {}
+  lp_orig = {}
+  pred_boot = {}
+  pred_orig = {}
+  cstat_boot = [0] * B
+  cstat_orig = [0] * B
+  boot_out_group = {}
+  orig_out_group = {}
+  dslope_boot = [0] * B
+  dslope_orig = [0] * B
+  # Predictors of original (development) data
+  X_rdata = data[X]
+  X_rdata = X_rdata.assign(intercept = 1.0)
+  # Run original model
+  lrm_app = smf.GLM(data[y], X_rdata, family = smf.families.Binomial()).fit()
+  # Save predictors of the original model
+  coeff_apparent = lrm_app.params
+  # Calculating the linear predictor (X*beta)
+  lp_apparent = np.matmul(X_rdata, coeff_apparent)
+  pred_apparent = lrm_app.predict(X_rdata)
+  # Apparent C-statistic and discrimination slope
+  cstat_app = concordance_index(data[y], lp_apparent)  # c-statistic
+  app_out_group = pred_apparent.groupby(data[y]).mean()
+  dslope_app = abs(app_out_group[1] - app_out_group[0])
+  
+  for j in range(B):
+    # Bootstrapping development data
+    bdata[j] = sk.utils.resample(data, replace = True, n_samples = len(data)) 
+    bdata[j] = bdata[j].assign(intercept = 1.0)
+    X_boot[j] =  bdata[j][pd.Index(X_rdata.columns)]
+    # Logistic regression model in every bootstrapped data
+    lrm_boot[j] = smf.GLM(bdata[j][y], X_boot[j], family = smf.families.Binomial())
+    coeff_boot[j] = lrm_boot[j].fit().params # coefficients
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model and in every bootstrapped data
+    lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
+    pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model in every data
+    lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
+    pred_orig[j] = lrm_boot[j].fit().predict(X_rdata)
+    
+    return(pred_orig)
+
+    # Discrimination --
+  
+    ## C-statistic --
+    cstat_boot[j] = concordance_index(bdata[j][y], lp_boot[j]) 
+    cstat_orig[j] = concordance_index(rdata[y], lp_orig[j]) 
+    cstat_diff = np.subtract(cstat_boot, cstat_orig)
+    cstat_opt = np.mean(cstat_diff)
+  
+    ## Discrimination slope --
+    boot_out_group[j] = pred_boot[j].groupby(bdata[j][y]).mean()
+    dslope_boot[j] = abs(boot_out_group[j][1] - boot_out_group[j][0])
+  
+    orig_out_group[j] = pred_orig[j].groupby(rdata[y]).mean()
+    dslope_orig[j] = abs(orig_out_group[j][1] - orig_out_group[j][0])
+    dslope_diff = np.subtract(dslope_boot, dslope_orig)
+    dslope_opt = np.mean(dslope_diff)
+    
+    res_int = pd.DataFrame(
+      {"C-statistic": cstat_app - cstat_opt,
+       "Discrimination slope": dslope_app - dslope_opt},
+       index = [0]
+    )
+    
+  return(res_int)
+
+res_int = bootstrap_cv_lrm(rdata, 
+                           y = "tum_res",
+                           X = {"ter_pos_Yes", "preafp_Yes",
+                                 "prehcg_Yes", "sqpost", "reduc10"},
+                           B = 2000)
+
+# ---------------------------------------------
+import warnings
+warnings.simplefilter(action = "ignore", category = FutureWarning)
+warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
+import pandas as pd
+import numpy as np
+import scipy as sp
+import tableone as tb
+import statsmodels.api as smf
+import matplotlib.pyplot as plt
+import sklearn as sk
+import seaborn as sns
+import lifelines 
+from lifelines.utils import concordance_index
+ 
+ 
+ 
+ 
+ 
+def bootstrap_cv_lrm(data, y, X, B = 2000):
+  
+    bdata = {}
+    X_boot = {}
+    lrm_boot = {}
+    coeff_boot = {}
+    lp_boot = {}
+    lp_orig = {}
+    pred_boot = {}
+    pred_orig = {}
+    cstat_boot = [0] * B
+    cstat_orig = [0] * B
+    boot_out_group = {}
+    orig_out_group = {}
+    dslope_boot = [0] * B
+    dslope_orig = [0] * B
+
+    # Predictors of original (development) data
+    X_rdata = data[X]
+    X_rdata = X_rdata.assign(intercept = 1.0)
+
+  # Run original model
+  lrm_app = smf.GLM(data[y], X_rdata, family = smf.families.Binomial()).fit()
+  
+  # Save predictors of the original model
+  coeff_apparent = lrm_app.params
+
+  # Calculating the linear predictor (X*beta)
+  lp_apparent = np.matmul(X_rdata, coeff_apparent)
+  pred_apparent = lrm_app.predict(X_rdata)
+
+  # Apparent C-statistic and discrimination slope
+  cstat_app = concordance_index(data[y], lp_apparent)  # c-statistic
+  app_out_group = pred_apparent.groupby(data[y]).mean()
+  dslope_app = abs(app_out_group[1] - app_out_group[0])
+ 
+  for j in range(B):
+    # Bootstrapping development data
+    bdata[j] = sk.utils.resample(data, replace = True, n_samples = len(data)) # bootstrapping development data
+      
+    bdata[j] = bdata[j].assign(intercept = 1.0)
+      
+    X_boot[j] =  bdata[j][pd.Index(X_rdata.columns)]
+    
+    # Logistic regression model in every bootstrapped data
+    lrm_boot[j] = smf.GLM(bdata[j][y], X_boot[j], family = smf.families.Binomial())
+    coeff_boot[j] = lrm_boot[j].fit().params # coefficients
+  
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model and in every bootstrapped data
+    lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
+    pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+  
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model in every data
+    lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
+    pred_orig[j] = lrm_boot[j].fit().predict(X_rdata)
+  
+    # Discrimination --
+  
+    ## C-statistic --
+    cstat_boot[j] = concordance_index(bdata[j][y], lp_boot[j]) 
+    cstat_orig[j] = concordance_index(rdata[y], lp_orig[j]) 
+    cstat_diff = np.subtract(cstat_boot, cstat_orig)
+    cstat_opt = np.mean(cstat_diff)
+  
+    ## Discrimination slope --
+    boot_out_group[j] = pred_boot[j].groupby(bdata[j][y]).mean()
+    dslope_boot[j] = abs(boot_out_group[j][1] - boot_out_group[j][0])
+  
+    orig_out_group[j] = pred_orig[j].groupby(rdata[y]).mean()
+    dslope_orig[j] = abs(orig_out_group[j][1] - orig_out_group[j][0])
+    dslope_diff = np.subtract(dslope_boot, dslope_orig)
+    dslope_opt = np.mean(dslope_diff)
+    
+    res_int = pd.DataFrame(
+      {"C-statistic": cstat_app - cstat_opt,
+       "Discrimination slope": dslope_app - dslope_opt},
+       index = [0]
+    )
+    
+  return(res_int)
+
+ 
+
+
+#--------------------------------
 
 #### Internal validation (optimism-corrected bootstrap)
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X_rdata = X_rdata.assign(intercept = 1.0)
 
+
+
+ 
 
 B = 2000
 bdata = {}
