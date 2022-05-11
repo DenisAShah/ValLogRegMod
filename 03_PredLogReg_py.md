@@ -47,6 +47,7 @@ library(pacman)
 
 pacman::p_load(
   reticulate,
+  tidyverse,
   knitr,
   kableExtra
 )
@@ -377,7 +378,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
     ## Date:                Wed, 11 May 2022   Deviance:                       561.87
-    ## Time:                        14:23:39   Pearson chi2:                     520.
+    ## Time:                        16:35:27   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -406,7 +407,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
     ## Date:                Wed, 11 May 2022   Deviance:                       537.21
-    ## Time:                        14:23:40   Pearson chi2:                     546.
+    ## Time:                        16:35:30   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -443,7 +444,7 @@ Click to expand code
 
 ``` python
 # Models -------------
-X =  rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X = X.assign(intercept = 1.0)
 
 fit_lrm = smf.GLM(rdata.tum_res, X, family = smf.families.Binomial()).fit()
@@ -574,4 +575,339 @@ Steyerberg et al. (2010);
 <summary>
 Click to expand code
 </summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+# Logistic regression using statsmodels library
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Create dataframe dev_out and val_out containing all info useful
+# to assess prediction performance in the development and in the validation data
+
+# Save estimated predicted probabilities in the development data
+pred_rdata = result_lrm.predict(X_rdata)
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_rdata = np.matmul(X_rdata, coeff)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info 
+# y_dev = outcome of the development
+# lp_dev = linear predictor calculated in the developement data
+# pred_dev = estimated predicted probability in the development data
+dev_out =  pd.DataFrame({'y_dev': rdata["tum_res"], 
+                         'lp_dev' : lp_rdata,
+                         'pred_dev' : pred_rdata})                      
+dev_out = dev_out.assign(intercept = 1.0) # Add intercept
+
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Discrimination -------------------
+
+import lifelines 
+from lifelines.utils import concordance_index
+
+
+## C-statistic ---
+cstat_rdata = concordance_index(dev_out.y_dev, dev_out.lp_dev) # development data
+cstat_vdata = concordance_index(val_out.y_val, val_out.lp_val) # validation data
+
+## Discrimination slope ---
+
+### Development data ----
+#### Apparent validation
+dev_out_group = dev_out.groupby("y_dev").mean()
+dslope_rdata = abs(dev_out_group.pred_dev[1] - dev_out_group.pred_dev[0])
+
+### Validation data ----
+val_out_group = val_out.groupby("y_val").mean()
+dslope_vdata = abs(val_out_group.pred_val[1] - val_out_group.pred_val[0])
+
+#### Bootstrap percentile confidence intervals
+# Bootstrap confidence intervals for development and validation set
+# NOTE: I need to understand how to set up a random seed to reproduce
+# the same boostrapped data
+B = 2000
+bdev_out = {}
+bval_out = {}
+cstat_dev_b = [0] * B
+dev_bgroup = {}
+dslope_dev_b = [0] * B
+cstat_val_b = [0] * B
+val_bgroup = {}
+dslope_val_b = [0] * B
+for j in range(B): 
+  
+  bdev_out[j] = sk.utils.resample(dev_out, 
+      replace = True, 
+      n_samples = len(dev_out)) # bootstrapping development data
+      
+  bval_out[j] = sk.utils.resample(val_out, 
+      replace = True, 
+      n_samples = len(val_out)) # bootstrapping validation data
+  
+  # Bootstrapped discrimination measures - development data     
+  cstat_dev_b[j] = concordance_index(bdev_out[j].y_dev, bdev_out[j].lp_dev)
+  dev_bgroup[j] = bdev_out[j].groupby("y_dev").mean().pred_dev
+  dslope_dev_b[j] = abs(dev_bgroup[j][1] - dev_bgroup[j][0])
+  
+  # Bootstrapped discrimination measures - validation data  
+  cstat_val_b[j] = concordance_index(bval_out[j].y_val, bval_out[j].lp_val)
+  val_bgroup[j] = bval_out[j].groupby("y_val").mean().pred_val
+  dslope_val_b[j] = abs(val_bgroup[j][1] - val_bgroup[j][0])
+  
+# Internal validation function
+#
+# Calculate optimism-corrected bootstrap internal validation for c-statistic and 
+# discrimination slope.
+# 
+# @type  data: pandas.core.frame.DataFrame
+# @param data: data frame
+# @type  y:  str 
+# @param y:  variabile identifying the binary outcome
+# @type  X:  pandas.core.frame.DataFrame
+# @param X:  predictors including the intercept
+# @type  B:  integer
+# @param B:  number of bootstrap sample (default B = 2000)
+# @rtype:    pandas.core.frame.DataFrame 
+# @return:   pandas.core.frame.DataFrame including optimism-corrected bootstrap internal
+#            validation prediction performance measures.
+# 
+
+def bootstrap_cv_lrm(data, y, X, B = 2000):
+
+  bdata = {}
+  X_boot = {}
+  lrm_boot = {}
+  coeff_boot = {}
+  lp_boot = {}
+  lp_orig = {}
+  pred_boot = {}
+  pred_orig = {}
+  cstat_boot = [0] * B
+  cstat_orig = [0] * B
+  boot_out_group = {}
+  orig_out_group = {}
+  dslope_boot = [0] * B
+  dslope_orig = [0] * B
+  
+  # Predictors of original (development) data
+  X_rdata = data[X]
+  X_rdata = X_rdata.assign(intercept = 1.0)
+  # Run original model
+  lrm_app = smf.GLM(data[y], X_rdata, family = smf.families.Binomial()).fit()
+  # Save predictors of the original model
+  coeff_apparent = lrm_app.params
+  # Calculating the linear predictor (X*beta)
+  lp_apparent = np.matmul(X_rdata, coeff_apparent)
+  pred_apparent = lrm_app.predict(X_rdata)
+  # Apparent C-statistic and discrimination slope
+  cstat_app = concordance_index(data[y], lp_apparent)  # c-statistic
+  app_out_group = pred_apparent.groupby(data[y]).mean()
+  dslope_app = abs(app_out_group[1] - app_out_group[0])
+  
+  for j in range(B):
+    # Bootstrapping development data
+    bdata[j] = sk.utils.resample(data, replace = True, n_samples = len(data)) 
+    bdata[j] = bdata[j].assign(intercept = 1.0)
+    X_boot[j] =  bdata[j][pd.Index(X_rdata.columns)]
+    # Logistic regression model in every bootstrapped data
+    lrm_boot[j] = smf.GLM(bdata[j][y], X_boot[j], family = smf.families.Binomial())
+    coeff_boot[j] = lrm_boot[j].fit().params # coefficients
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model and in every bootstrapped data
+    lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
+    pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+    # Linear predictor and predicted probabilities 
+    # in every bootstrapped model in every data
+    lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
+    pred_orig[j] = lrm_boot[j].fit().predict(X_rdata)
+    
+    # Discrimination --
+    ## C-statistic --
+    cstat_boot[j] = concordance_index(bdata[j][y], lp_boot[j]) 
+    cstat_orig[j] = concordance_index(rdata[y], lp_orig[j]) 
+    cstat_diff = np.subtract(cstat_boot, cstat_orig)
+    cstat_opt = np.mean(cstat_diff)
+ 
+    ## Discrimination slope --
+    boot_out_group[j] = pred_boot[j].groupby(bdata[j][y]).mean()
+    dslope_boot[j] = abs(boot_out_group[j][1] - boot_out_group[j][0])
+  
+    orig_out_group[j] = pred_orig[j].groupby(rdata[y]).mean()
+    dslope_orig[j] = abs(orig_out_group[j][1] - orig_out_group[j][0])
+    dslope_diff = np.subtract(dslope_boot, dslope_orig)
+    dslope_opt = np.mean(dslope_diff)
+    
+    res_int = pd.DataFrame(
+      {"C-statistic": cstat_app - cstat_opt,
+       "Discrimination slope": dslope_app - dslope_opt},
+       index = [0]
+    )
+    
+  return(res_int)
+
+res_int = bootstrap_cv_lrm(rdata, 
+                           y = "tum_res",
+                           X = {"ter_pos_Yes", "preafp_Yes",
+                                 "prehcg_Yes", "sqpost", "reduc10"},
+                           B = 2000)
+```
+
 </details>
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Apparent
+
+</div>
+
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Internal
+
+</div>
+
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+External
+
+</div>
+
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+C-statistic
+</td>
+<td style="text-align:left;">
+0.82
+</td>
+<td style="text-align:left;">
+0.78
+</td>
+<td style="text-align:left;">
+0.85
+</td>
+<td style="text-align:left;">
+0.81
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+0.79
+</td>
+<td style="text-align:left;">
+0.72
+</td>
+<td style="text-align:left;">
+0.84
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Discrimination slope
+</td>
+<td style="text-align:left;">
+0.3
+</td>
+<td style="text-align:left;">
+0.26
+</td>
+<td style="text-align:left;">
+0.34
+</td>
+<td style="text-align:left;">
+0.29
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+0.24
+</td>
+<td style="text-align:left;">
+0.18
+</td>
+<td style="text-align:left;">
+0.3
+</td>
+</tr>
+</tbody>
+</table>
