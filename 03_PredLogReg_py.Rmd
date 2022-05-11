@@ -821,7 +821,7 @@ res_mean_cal = np.reshape(
 
 res_mean_cal = pd.DataFrame(res_mean_cal, 
                          columns = ["Estimate", "2.5 %", "97.5 %"] ,
-                         index = ["Calibration intercept", "Discrimination slope"])
+                         index = ["Calibration intercept", "O/E ratio"])
 ```
 
 ```{r, res_mean_cal_r, fig.align='center',echo=FALSE}
