@@ -381,7 +381,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
     ## Date:                Wed, 11 May 2022   Deviance:                       561.87
-    ## Time:                        17:19:47   Pearson chi2:                     520.
+    ## Time:                        17:52:43   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -410,7 +410,7 @@ resection.
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
     ## Date:                Wed, 11 May 2022   Deviance:                       537.21
-    ## Time:                        17:19:48   Pearson chi2:                     546.
+    ## Time:                        17:52:44   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -1056,7 +1056,7 @@ Calibration intercept
 </tr>
 <tr>
 <td style="text-align:left;">
-Discrimination slope
+O/E ratio
 </td>
 <td style="text-align:right;">
 0.99
