@@ -617,6 +617,7 @@ The calibration slope indicates the overall strength of the linear predictor (LP
   <summary>Click to expand code</summary>
 ```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE ,message=FALSE, warning=FALSE}
 # Models
+vdata$y <- as.numeric(vdata$tum_res) - 1
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
 fit_lrm <- lrm(tum_res ~ 
@@ -641,8 +642,8 @@ slope_CI <- confint(cal_slope) # Confidence interval
 k <- 2
 res_weak_cal <- cbind(
   "Estimate" = cal_slope$coefficients[2],
-  "Lower .95" = slope_CI[1],
-  "Upper .95" = slope_CI[2]
+  "Lower .95" = slope_CI[2,1],
+  "Upper .95" = slope_CI[2,2]
 )
 rownames(res_weak_cal) <- "Calibration slope"
 
