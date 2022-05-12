@@ -716,9 +716,9 @@ kable(py$res_discr, row.names = TRUE) |>
 
 ```
 
-C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78 (95% CI: 0.73-0.84) in the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a C-statistic of 0.81.  
+C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.79 (95% CI: 0.72-0.84) in the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a C-statistic of 0.81.  
 
-Discrimination slope was 0.30 (95% CI: 0.27-0.32), and 0.24 (95% CI: 0.17-0.29) for the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a discrimination slope of 0.29.
+Discrimination slope was 0.30 (95% CI: 0.26-0.34), and 0.24 (95% CI: 0.18-0.30) for the development and validation data, respectively. Internal cross-validation based on optimism-corrected bootstrapping showed a discrimination slope of 0.29.
 
 ### 2.2 Calibration
 Calibration refers to the agreement between observed outcomes and predictions. For example, if we predict a 20% risk of residual tumor for a testicular cancer patient, the observed frequency of tumor should be approximately 20 out of 100 patients with such a prediction.
@@ -739,7 +739,6 @@ The mean calibration can be estimated:
   <summary>Click to expand code</summary>
 ```{python, mean_cal, fig.align='center',echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
 ## Fitting the logistic regression model ------------------
-# Logistic regression using statsmodels library
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X_rdata = X_rdata.assign(intercept = 1.0)
@@ -766,13 +765,9 @@ lp_vdata = np.matmul(X_vdata, coeff)
 # Validation data --
 # y_val = outcome of the validation data
 # lp_val = linear predictor calculated in the validation data
-# pred_val = estimated predicted probability in the validation data
 val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
-                         'lp_val' : lp_vdata,
-                         'pred_val' : pred_vdata})                      
+                         'lp_val' : lp_vdata})                      
 val_out = val_out.assign(intercept = 1.0) # Add intercept
-
-
 
 # Calibration intercept (calibration-in-the-large) -------------
 # df_cal_int = pd.concat(y_val, lp_val)
@@ -837,6 +832,66 @@ The term ‘weak’ refers to the limited flexibility in assessing calibration. 
 calibration is defined as mean calibration ratio and calibration slope of unity(or calibration intercept equals to zero). 
 The calibration slope indicates the overall strength of the linear predictor (LP), which can be interpreted as the level of overfitting
 (slope <1) or underfitting (slope>1). A value of slope smaller than 1 can also be interpreted as reflecting a need for shrinkage of regression coefficients in a prediction model. 
+<details>
+  <summary>Click to expand code</summary>
+```{python, weak_cal, fig.align='center',echo=TRUE, eval=FALSE ,message=FALSE, warning=FALSE}
+
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 
+# Calibration slope
+cal_slope = smf.GLM(val_out.y_val, 
+                    val_out[["intercept", "lp_val"]], 
+                    family = smf.families.Binomial())
+res_cal_slope = cal_slope.fit()
+res_cal_slope_summary = res_cal_slope.summary()
+# res_cal_slope_summary
+```
+</details>
 
+```{python, weak_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```
+
+```{python, res_weak_cal, fig.align='center',echo=FALSE}
+res_cal_slope.conf_int()
+res_cal_slope.summary()
+res_cal_slope.params[1]
+
+k = 2
+res_mean_cal = pd.DataFrame(
+  {"Estimate": round(res_cal_slope.params[1], k),
+    " 2.5 %" : round(res_cal_slope.conf_int().iloc[1,0], k),
+    "97.5 %" : round(res_cal_slope.conf_int().iloc[1,1], k)},
+    index = ["Calibration slope"])
+
+```
+
+```{r, res_weak_cal_r, fig.align='center',echo=FALSE}
+kable(py$res_mean_cal) |>
+  kable_styling("striped", position = "center") 
+```
