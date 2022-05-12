@@ -1038,6 +1038,7 @@ Some confidence intervals are calculated using the bootstrap percentile method.
   <summary>Click to expand code</summary>
 ```{python, overall, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
 ## Fitting the logistic regression model ------------------
+# Logistic regression using statsmodels library
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X_rdata = X_rdata.assign(intercept = 1.0)
@@ -1045,24 +1046,40 @@ X_rdata = X_rdata.assign(intercept = 1.0)
 lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
 result_lrm = lrm.fit()
 
+# Create dataframe dev_out and val_out containing all info useful
+# to assess prediction performance in the development and in the validation data
+
+# Save estimated predicted probabilities in the development data
+pred_rdata = result_lrm.predict(X_rdata)
+
 # Save predictors of the validation model
 X_vdata = vdata         
 X_vdata = X_vdata.assign(intercept = 1.0)
 X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
 
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
 # Save coefficients of the developed model
 coeff = result_lrm.params
 
 # Calculating the linear predictor (X*beta)
+lp_rdata = np.matmul(X_rdata, coeff)
 lp_vdata = np.matmul(X_vdata, coeff)
 
-# Estimated predicted probabilities by the model in the validation data
-pred_vdata = result_lrm.predict(X_vdata)
+# Create the dataframe including all useful info 
+# y_dev = outcome of the development
+# lp_dev = linear predictor calculated in the developement data
+# pred_dev = estimated predicted probability in the development data
+dev_out =  pd.DataFrame({'y_dev': rdata["tum_res"], 
+                         'lp_dev' : lp_rdata,
+                         'pred_dev' : pred_rdata})                      
+dev_out = dev_out.assign(intercept = 1.0) # Add intercept
 
-# Create the dataframe including all useful info
 # Validation data --
 # y_val = outcome of the validation data
 # lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
 val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
                          'lp_val' : lp_vdata,
                          'pred_val' : pred_vdata})                      
@@ -1071,27 +1088,51 @@ val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 # Brier Score
 from sklearn.metrics import brier_score_loss
-bs_lrm = brier_score_loss(val_out.y_val, val_out.pred_val)
+bs_lrm_dev = brier_score_loss(val_out.y_val, val_out.pred_val)
+bs_lrm_val = brier_score_loss(val_out.y_val, val_out.pred_val)
 
 
 # Scaled brier score
-# Develop null model and estimate the Brier Score for the null model
-lrm_null = smf.GLM(val_out.y_val, val_out.intercept, 
+# Develop null model and estimate the Brier Score for the null model - validation data
+lrm_null_val = smf.GLM(val_out.y_val, val_out.intercept, 
                    family = smf.families.Binomial())                  
-result_lrm_null = lrm_null.fit()
-result_lrm_null.summary()
-result_lrm_null.params[0]
+result_lrm_null_val = lrm_null_val.fit()
 
 val_out_null = pd.DataFrame(
   { 
     'y_val' : vdata["tum_res"],
-    'lp_null' : [result_lrm_null.params[0]] * len(vdata),
-    'pred_null' : np.exp([result_lrm_null.params[0]] * len(vdata)) / (1 + np.exp([result_lrm_null.params[0]] * len(vdata)))
+    'lp_null' : [result_lrm_null_val.params[0]] * len(vdata),
+    'pred_null' : np.exp([result_lrm_null_val.params[0]] * len(vdata)) / (1 + np.exp([result_lrm_null_val.params[0]] * len(vdata)))
   }
 )
-bs_lrm_null = brier_score_loss(val_out_null.y_val, 
+bs_lrm_null_val = brier_score_loss(val_out_null.y_val, 
                                val_out_null.pred_null)
-                               
+ 
+ 
+#### Bootstrap percentile confidence intervals
+# Bootstrap confidence intervals for development and validation set
+# NOTE: I need to understand how to set up a random seed to reproduce
+# the same boostrapped data
+B = 2000
+bdev_out = {}
+bval_out = {}
+B = 2000
+bdev_out_null = {}
+bval_out_null = {}
+boot_brier_dev = [0] * B
+boot_brier_null_dev = [0] * B
+boot_brier_val = [0] * B
+boot_brier_null_val = [0] * B
+
+for j in range(B): 
+  
+  bdev_out[j] = sk.utils.resample(dev_out, 
+      replace = True, 
+      n_samples = len(dev_out)) # bootstrapping development data
+      
+  bval_out[j] = sk.utils.resample(val_out, 
+      replace = True, 
+      n_samples = len(val_out)) # bootstrapping validation data                              
 # Bootstrap percentile confidence intervals
 B = 2000
 bval_out_null = {}
