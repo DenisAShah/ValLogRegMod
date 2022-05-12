@@ -783,8 +783,9 @@ lp_vdata = np.matmul(X_vdata, coeff)
 # Validation data --
 # y_val = outcome of the validation data
 # lp_val = linear predictor calculated in the validation data
-val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
-                         'lp_val' : lp_vdata})                      
+val_out =  pd.DataFrame({'y_val' : vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
 val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 # Calibration intercept (calibration-in-the-large) -------------
@@ -1228,8 +1229,11 @@ overall_metrics = pd.DataFrame(overall_metrics,
 
 ```{r, res_ov_r, fig.align='center',echo=FALSE}
 kable(py$overall_metrics) |>
-  kable_styling("striped", position = "center") 
-
+  kable_styling("striped", position = "center") |>
+  add_header_above(c(" " = 1, 
+                     "Apparent" = 3, 
+                     "Internal" = 3, 
+                     "External" = 3))
 ```
 
 
