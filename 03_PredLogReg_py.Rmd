@@ -44,10 +44,8 @@ pacman::p_load(
 )
 ```
 </details>
-
 ```{r, wdlib_r, warning=FALSE, fig.align='center', eval=TRUE}
 ```
-
 
 <details>
   <summary>Click to expand code</summary>
@@ -878,12 +876,8 @@ res_cal_slope_summary = res_cal_slope.summary()
 ```
 
 ```{python, res_weak_cal, fig.align='center',echo=FALSE}
-res_cal_slope.conf_int()
-res_cal_slope.summary()
-res_cal_slope.params[1]
-
 k = 2
-res_mean_cal = pd.DataFrame(
+res_slope_cal = pd.DataFrame(
   {"Estimate": round(res_cal_slope.params[1], k),
     " 2.5 %" : round(res_cal_slope.conf_int().iloc[1,0], k),
     "97.5 %" : round(res_cal_slope.conf_int().iloc[1,1], k)},
@@ -892,6 +886,287 @@ res_mean_cal = pd.DataFrame(
 ```
 
 ```{r, res_weak_cal_r, fig.align='center',echo=FALSE}
-kable(py$res_mean_cal) |>
+kable(py$res_slope_cal) |>
   kable_styling("striped", position = "center") 
 ```
+
+#### 2.2.3 Moderate calibration
+Moderate calibration concerns whether among patients with the same predicted risk, the observed event rate equals the predicted risk. A graphical assessment of calibration is possible with predictions on the x-axis, and the outcome on the y-axis. Perfect predictions should be on the 45° line.  For binary outcomes, the plot contains only 0 and 1 values for the y-axis. Smoothing techniques can be used to estimate
+the observed probabilities of the outcome (p(y=1)) in relation to the predicted probabilities, e.g. using the lowess algorithm. The observed probabilities can be also estimated using a secondary logistic regression model using the predicted probability as a covariate. We can assume linearity or a more flexible relation between the covariate and the observed probabilties using, for example, splines. We may however expect that the specific type of smoothing may affect the graphical impression, especially in smaller data sets.
+
+<details>
+  <summary>Click to expand code</summary>
+```{python, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE}
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Estimated predicted probabilities by the model in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Calibration plot 
+# Method used: The actual probability is estimated using a 'secondary' logistic regression model
+# using the predicted probabilities as a covariate.
+# Non-parametric curve (smooth using lowess) is also used as an alternative method.
+
+pred_val_cal = pd.DataFrame({'pred_val' : pred_vdata})
+pred_val_cal['intercept'] = 1.0
+moderate_cal = smf.GLM(val_out.y_val, 
+                       val_out[["intercept", "pred_val"]], 
+                       family = smf.families.Binomial())
+res_moderate_cal = moderate_cal.fit()
+
+# Estimated the standard error of the predicted probabilities
+# to add confidence bands to the calibration plot estimated using
+# a 'secondary' logistic regression model.
+# We need: 
+# a. matrix of variance and covariance of the 'secondary' logistic model
+# res_moderate_cal.cov_params()
+
+# b. estimate the linear predictor as x*beta
+lp_cal = np.matmul(val_out[["intercept", "pred_val"]],
+                  res_moderate_cal.params)
+
+# Estimating the density 
+dlogis = sp.stats.logistic.pdf(lp_cal) # logistic density function = exp(-xb) / (1 + exp(-xb))**2)
+
+# Estimating the standard error of predicted probabilities
+#   Formula details are in https://blog.methodsconsultants.com/posts/delta-method-standard-errors/
+
+se_fit = [0] * len(vdata)
+for j in range(len(vdata)):
+  se_fit[j] = np.dot(dlogis[j], val_out[["intercept", "pred_val"]].loc[j])
+  se_fit[j] = np.dot(se_fit[j], res_moderate_cal.cov_params())
+  se_fit[j] = np.dot(se_fit[j], val_out[["intercept", "pred_val"]].loc[j].T)
+  se_fit[j] = np.dot(se_fit[j], dlogis[j])
+se_fit = np.sqrt(se_fit)
+# NOTE: I would like to improve and use only matrix operators rather than
+# generalizing a single individual case using for loop
+
+# Lowess
+lowess = smf.nonparametric.lowess
+fit_lowess = lowess(val_out.y_val, 
+                    val_out.pred_val, 
+                    frac = 2/3,
+                    it = 0) # same f and iter parameters as R
+
+# Create df for calibration plot based on secondary log reg
+alpha = 0.05
+df_cal = pd.DataFrame({
+    'obs' :  res_moderate_cal.predict(val_out[["intercept", "pred_val"]]),
+    'pred' : val_out.pred_val,
+    'se_fit' : se_fit,
+    'lower_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) - sp.stats.norm.ppf(1 - alpha / 2) * se_fit,
+    'upper_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) + sp.stats.norm.ppf(1 - alpha / 2) * se_fit
+})
+
+# Sorting
+df_cal = df_cal.sort_values(by = ['pred'])
+
+# Calibration plots
+p1 = plt.plot(df_cal.pred, df_cal.obs, "--", 
+         label = "Logistic", color = "black")
+p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
+         color = "blue", label = "Non parametric")  
+plt.legend(loc = "upper left")
+p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
+         label = "Logistic", color = "black")
+p4 = plt.plot(df_cal.pred, df_cal.upper_95, "--", 
+         label = "Logistic", color = "black")
+
+plt.xlabel("Predicted probability")
+plt.ylabel("Actual probability")
+plt.title("Calibration plot")
+plt.show()
+plt.clf()
+plt.cla()
+plt.close('all')
+
+# Calibration metrics based on a secondary logistic regression model
+k = 3
+cal_metrics = pd.DataFrame(
+  {'ICI' : np.round(np.mean(abs(df_cal.obs - df_cal.pred)), k),
+   'E50' : np.round(np.median(abs(df_cal.obs - df_cal.pred)), k),
+   'E90' : np.round(np.quantile(abs(df_cal.obs - df_cal.pred), 
+                       0.9, interpolation = 'midpoint'), k)}, 
+  index = ["Calibration measures"]
+)
+```
+</details>
+```{python moder_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```
+
+```{r, res_numcal_r, message=FALSE,warning=FALSE, fig.align='center',include=TRUE, echo=FALSE}
+kable(py$cal_metrics) |>
+  kable_styling("striped", position = "center") 
+```
+Calibration measures (i.e., ICI, E50, E90) using a 'secondary' logistic regression to estimate the observed probability of the event indicate good calibration.  
+Calibration measures might also be calculated using the non-parametric method (e.g., lowess) to estimate the observed probability of the event.
+
+### 2.3 Overall performance measures
+The overall performance measures generally estimate the distance between the predicted outcome and actual outcome.  
+We calculate the Brier Score, and the scaled Brier scale (also known as index of prediction accuracy) and the corresponding confidence intervals.
+
+Some confidence intervals are calculated using the bootstrap percentile method.
+
+<details>
+  <summary>Click to expand code</summary>
+```{python, overall, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Estimated predicted probabilities by the model in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Brier Score
+from sklearn.metrics import brier_score_loss
+bs_lrm = brier_score_loss(val_out.y_val, val_out.pred_val)
+
+
+# Scaled brier score
+# Develop null model and estimate the Brier Score for the null model
+lrm_null = smf.GLM(val_out.y_val, val_out.intercept, 
+                   family = smf.families.Binomial())                  
+result_lrm_null = lrm_null.fit()
+result_lrm_null.summary()
+result_lrm_null.params[0]
+
+val_out_null = pd.DataFrame(
+  { 
+    'y_val' : vdata["tum_res"],
+    'lp_null' : [result_lrm_null.params[0]] * len(vdata),
+    'pred_null' : np.exp([result_lrm_null.params[0]] * len(vdata)) / (1 + np.exp([result_lrm_null.params[0]] * len(vdata)))
+  }
+)
+bs_lrm_null = brier_score_loss(val_out_null.y_val, 
+                               val_out_null.pred_null)
+                               
+# Bootstrap percentile confidence intervals
+B = 2000
+bval_out_null = {}
+boot_brier = [0] * B
+boot_brier_null = [0] * B
+
+for j in range(B): 
+  bval_out_null[j] = sk.utils.resample(val_out_null, 
+      replace = True, 
+      n_samples = len(val_out_null))
+      
+  boot_brier[j] = brier_score_loss(bval_out[j].y_val, 
+                                   bval_out[j].pred_val),
+  
+  boot_brier_null[j] = brier_score_loss(bval_out_null[j].y_val, 
+                                        bval_out_null[j].pred_null)
+  
+scaled_brier_boot = 1 - (np.array(boot_brier) / np.array(boot_brier_null))
+
+# Overall performance results
+overall_metrics = np.reshape(
+  (bs_lrm,
+   np.percentile(boot_brier, q = 2.5),
+   np.percentile(boot_brier, q = 97.5), 
+   
+   1 - bs_lrm / bs_lrm_null,
+   np.percentile(scaled_brier_boot, q = 2.5),
+   np.percentile(scaled_brier_boot, q = 97.5)),
+   
+   (2, 3)
+)
+
+overall_metrics = pd.DataFrame(overall_metrics, 
+                               columns = ["Estimate", "2.5 %", "97.5 %"], 
+                               index = ["Brier Score", "Scaled Brier"])
+overall_metrics
+
+```
+</details>
+
+```{python, overall, fig.align='center', warning=FALSE, eval=TRUE}
+```
+
+```{r, res_ov_r, fig.align='center',echo=FALSE}
+```
+
+
+## Goal 3 -  Clinical utility
+Discrimination and calibration measures are essential to assess the prediction performance but insufficient to evaluate the potential clinical utility of a risk prediction model for decision making. When new markers are available, clinical utility assessment evaluates whether the extended model helps to improve decision making.  
+Clinical utility is measured by the net benefit that includes the number of true positives and the number of false positives.
+Generally, in medicine, clinicians accepts to treat a certain number of patients for which interventions are unnecessary to be event free for a given time horizon. So, false negatives (the harm of not being event free for a given time horizon) are more important than false positives (the harm of unnecessary interventions). Thus, net benefit is the number of true positives classifications minus the false positives classifications weighted by a factor related to the harm of not preventing the event versus unnecessary interventions. The weighting is derived from the threshold probability to the event of interest (e.g. residual tumor). For example, a threshold of 20% implies that additional interventions for 4 patients of whom one would have experience the event if untreated is acceptable (thus treating 3 unnecessary patients). This strategy is compared with the strategies of treat all and treat none patients. If overtreatment is harmful, a higher threshold should be used. 
+
+The net benefit is calculated as:  
+  
+<img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BTP%7D%7Bn%7D-%5Cfrac%7BFP%7D%7Bn%7D*%5Cfrac%7Bp_t%7D%7B1-p_t%7D%7D">
+  
+*TP*=true positive patients   
+*FP*=false positive patients  
+*n*=number of patients and *p*<sub>t</sub> is the risk threshold.  
+
+  
+The decision curve is calculated as follows:
+  
+1. Choose a time horizon;
+2. Specify a risk threshold which reflects the ratio between harms and benefit of an additional intervention;
+3. Calculate the number of true positive and false positive given the threshold specified in (2);
+4. Calculate the net benefit of the risk prediction model;
+5. Plot net benefit on the *y-axis* against the risk threshold on the *x-axis*;
+6. Repeat steps 2-4 for each model consideration;
+7. Repeat steps 2-4 for the strategy of assuming all patients are treated;
+8. Draw a straight line parallel to the *x-axis* at y=0 representing the net benefit associated with the strategy of assuming that all patients are not treated.
+
+Given some thresholds, the model/strategy with higher net benefit represents the one that potentially improves  clinical decision making. However, poor discrimination and calibration lead to lower net benefit.
+
+More details are available in the paper of Vickers et al. [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577036/).  
+
+<details>
+  <summary>Click to expand code</summary>
