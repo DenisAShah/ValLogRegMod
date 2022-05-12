@@ -588,6 +588,7 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
   bdata = {}
   X_boot = {}
   lrm_boot = {}
+  lrm_boot_null = {}
   coeff_boot = {}
   lp_boot = {}
   lp_orig = {}
@@ -599,21 +600,30 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
   orig_out_group = {}
   dslope_boot = [0] * B
   dslope_orig = [0] * B
+  bs_boot = [0] * B
+  bs_orig = [0] * B
   
   # Predictors of original (development) data
   X_rdata = data[X]
   X_rdata = X_rdata.assign(intercept = 1.0)
   # Run original model
   lrm_app = smf.GLM(data[y], X_rdata, family = smf.families.Binomial()).fit()
+  # Null model for Scaled Brier score calculation
+  lrm_null = smf.GLM(data[y], X_rdata.intercept, family = smf.families.Binomial()).fit()
+  
   # Save predictors of the original model
   coeff_apparent = lrm_app.params
   # Calculating the linear predictor (X*beta)
   lp_apparent = np.matmul(X_rdata, coeff_apparent)
   pred_apparent = lrm_app.predict(X_rdata)
+  pred_null = lrm_null.predict(X_rdata.intercept)
   # Apparent C-statistic and discrimination slope
   cstat_app = concordance_index(data[y], lp_apparent)  # c-statistic
   app_out_group = pred_apparent.groupby(data[y]).mean()
   dslope_app = abs(app_out_group[1] - app_out_group[0])
+  bs_app = brier_score_loss(data[y], pred_apparent) 
+  bs_null = brier_score_loss(data[y], pred_null)
+  scaled_bs_app = 1 - bs_app / bs_null
   
   for j in range(B):
     # Bootstrapping development data
@@ -627,6 +637,7 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
     # in every bootstrapped model and in every bootstrapped data
     lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
     pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+    
     # Linear predictor and predicted probabilities 
     # in every bootstrapped model in every data
     lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
@@ -648,10 +659,18 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
     dslope_diff = np.subtract(dslope_boot, dslope_orig)
     dslope_opt = np.mean(dslope_diff)
     
+    # Brier score ---
+    bs_boot[j] = brier_score_loss(bdata[j][y], pred_boot[j])
+    bs_orig[j] = brier_score_loss(rdata[y], pred_orig[j])
+    bs_diff = np.subtract(bs_boot, bs_orig)
+    bs_opt = np.mean(bs_diff)
+    
     res_int = pd.DataFrame(
       {"C-statistic": cstat_app - cstat_opt,
-       "Discrimination slope": dslope_app - dslope_opt},
-       index = [0]
+       "Discrimination slope": dslope_app - dslope_opt,
+       "Brier score": bs_app - bs_opt,
+       "Scaled brier score": 1 - ((bs_app - bs_opt) / bs_null)},
+       index = ["Optimism-corrected bootstrap"]
     )
     
   return(res_int)
@@ -1038,7 +1057,6 @@ Some confidence intervals are calculated using the bootstrap percentile method.
   <summary>Click to expand code</summary>
 ```{python, overall, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
 ## Fitting the logistic regression model ------------------
-# Logistic regression using statsmodels library
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X_rdata = X_rdata.assign(intercept = 1.0)
@@ -1126,7 +1144,6 @@ bs_lrm_null_val = brier_score_loss(val_out_null.y_val,
 B = 2000
 bdev_out = {}
 bval_out = {}
-B = 2000
 bdev_out_null = {}
 bval_out_null = {}
 boot_brier_dev = [0] * B
@@ -1142,43 +1159,65 @@ for j in range(B):
       
   bval_out[j] = sk.utils.resample(val_out, 
       replace = True, 
-      n_samples = len(val_out)) # bootstrapping validation data                              
-# Bootstrap percentile confidence intervals
-B = 2000
-bval_out_null = {}
-boot_brier = [0] * B
-boot_brier_null = [0] * B
-
-for j in range(B): 
+      n_samples = len(val_out)) # bootstrapping validation data   
+      
+  bdev_out_null[j] = sk.utils.resample(dev_out_null, 
+      replace = True, 
+      n_samples = len(dev_out_null))
+      
   bval_out_null[j] = sk.utils.resample(val_out_null, 
       replace = True, 
       n_samples = len(val_out_null))
       
-  boot_brier[j] = brier_score_loss(bval_out[j].y_val, 
-                                   bval_out[j].pred_val),
+  boot_brier_dev[j] = brier_score_loss(bdev_out[j].y_dev, 
+                                       bdev_out[j].pred_dev)
   
-  boot_brier_null[j] = brier_score_loss(bval_out_null[j].y_val, 
-                                        bval_out_null[j].pred_null)
+  boot_brier_null_dev[j] = brier_score_loss(bdev_out_null[j].y_dev, 
+                                            bdev_out_null[j].pred_null)
+                                            
+  boot_brier_val[j] = brier_score_loss(bval_out[j].y_val, 
+                                       bval_out[j].pred_val)
   
-scaled_brier_boot = 1 - (np.array(boot_brier) / np.array(boot_brier_null))
+  boot_brier_null_val[j] = brier_score_loss(bval_out_null[j].y_val, 
+                                            bval_out_null[j].pred_null)
+  
+scaled_brier_boot_dev = 1 - (np.array(boot_brier_dev) / np.array(boot_brier_null_dev))
+scaled_brier_boot_val = 1 - (np.array(boot_brier_val) / np.array(boot_brier_null_val))
 
 # Overall performance results
+k = 2
 overall_metrics = np.reshape(
-  (bs_lrm_dev,
-   np.percentile(boot_brier, q = 2.5),
-   np.percentile(boot_brier, q = 97.5), 
+  (round(bs_lrm_dev, k),
+   round(np.percentile(boot_brier_dev, q = 2.5), k),
+   round(np.percentile(boot_brier_dev, q = 97.5), k), 
    
-   1 - bs_lrm_dev / bs_lrm_null_dev,
-   np.percentile(scaled_brier_boot, q = 2.5),
-   np.percentile(scaled_brier_boot, q = 97.5)),
+   round(np.float64(res_int["Brier score"]), k),
+   None,
+   None,
    
-   (2, 3)
+   round(bs_lrm_val, k),
+   round(np.percentile(boot_brier_val, q = 2.5), k),
+   round(np.percentile(boot_brier_val, q = 97.5), k),
+   
+   
+   round(1 - bs_lrm_dev / bs_lrm_null_dev, k),
+   round(np.percentile(scaled_brier_boot_dev, q = 2.5), k),
+   round(np.percentile(scaled_brier_boot_dev, q = 97.5), k),
+   
+   round(np.float64(res_int["Scaled brier score"]), k),
+   None,
+   None,
+   
+   round(1 - bs_lrm_val / bs_lrm_null_val, k),
+   round(np.percentile(scaled_brier_boot_val, q = 2.5), k),
+   round(np.percentile(scaled_brier_boot_val, q = 97.5), k)),
+   
+   (2, 9)
 )
 
 overall_metrics = pd.DataFrame(overall_metrics, 
-                               columns = ["Estimate", "2.5 %", "97.5 %"], 
+                               columns = np.tile(["Estimate", "2.5 %", "97.5 %"], 3), 
                                index = ["Brier Score", "Scaled Brier"])
-overall_metrics
 
 ```
 </details>
@@ -1187,6 +1226,9 @@ overall_metrics
 ```
 
 ```{r, res_ov_r, fig.align='center',echo=FALSE}
+kable(py$overall_metrics) |>
+  kable_styling("striped", position = "center") 
+
 ```
 
 
