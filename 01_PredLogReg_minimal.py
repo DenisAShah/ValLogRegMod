@@ -230,14 +230,17 @@ df_cal = pd.DataFrame({
 df_cal = df_cal.sort_values(by = ['pred'])
 
 # Calibration plots
-plt.plot(df_cal.pred, df_cal.obs, "--", 
+# Calibration plots
+p1 = plt.plot(df_cal.pred, df_cal.obs, "--", 
          label = "Logistic", color = "black")
-plt.plot(df_cal.pred, df_cal.lower_95, "--", 
+p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
+         color = "blue", label = "Non parametric")  
+plt.legend(loc = "upper left")
+p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
          label = "Logistic", color = "black")
-plt.plot(df_cal.pred, df_cal.upper_95, "--", 
+p4 = plt.plot(df_cal.pred, df_cal.upper_95, "--", 
          label = "Logistic", color = "black")
-plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
-         color = "blue")
+
 plt.xlabel("Predicted probability")
 plt.ylabel("Actual probability")
 plt.title("Calibration plot")
@@ -245,8 +248,6 @@ plt.show()
 plt.clf()
 plt.cla()
 plt.close('all')
-# NOTE: work in progress
-
 
 # Calibration metrics based on a secondary logistic regression model
 cal_metrics = pd.DataFrame(
