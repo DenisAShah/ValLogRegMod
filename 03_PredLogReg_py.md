@@ -21,6 +21,10 @@ Development and validation of logistic regression risk prediction models
     -   [2.2 Calibration](#22-calibration)
         -   [2.2.1 Mean calibration](#221-mean-calibration)
         -   [2.2.2 Weak calibration](#222-weak-calibration)
+        -   [2.2.3 Moderate calibration](#223-moderate-calibration)
+    -   [2.3 Overall performance
+        measures](#23-overall-performance-measures)
+-   [Goal 3 - Clinical utility](#goal-3---clinical-utility)
 
 ## Steps
 
@@ -70,14 +74,15 @@ Click to expand code
 import warnings
 warnings.simplefilter(action = "ignore", category = FutureWarning)
 warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
-import pandas as pd
+import pandas as pd # For data frames
 import numpy as np
 import scipy as sp
 import tableone as tb
-import statsmodels.api as smf
-import matplotlib.pyplot as plt
-import sklearn as sk
-import seaborn as sns
+import statsmodels.api as smf # For models
+import matplotlib.pyplot as plt # For plots
+import sklearn as sk # Also for bootstrap (resample)
+import seaborn as sns # For plots
+from sklearn.metrics import brier_score_loss # For Brier score calculation
 
 
 # Get work directory
@@ -380,8 +385,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            5
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
-    ## Date:                Wed, 11 May 2022   Deviance:                       561.87
-    ## Time:                        17:52:43   Pearson chi2:                     520.
+    ## Date:                Thu, 12 May 2022   Deviance:                       561.87
+    ## Time:                        17:33:12   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -409,8 +414,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            6
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
-    ## Date:                Wed, 11 May 2022   Deviance:                       537.21
-    ## Time:                        17:52:44   Pearson chi2:                     546.
+    ## Date:                Thu, 12 May 2022   Deviance:                       537.21
+    ## Time:                        17:33:13   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -706,6 +711,7 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
   bdata = {}
   X_boot = {}
   lrm_boot = {}
+  lrm_boot_null = {}
   coeff_boot = {}
   lp_boot = {}
   lp_orig = {}
@@ -717,21 +723,30 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
   orig_out_group = {}
   dslope_boot = [0] * B
   dslope_orig = [0] * B
+  bs_boot = [0] * B
+  bs_orig = [0] * B
   
   # Predictors of original (development) data
   X_rdata = data[X]
   X_rdata = X_rdata.assign(intercept = 1.0)
   # Run original model
   lrm_app = smf.GLM(data[y], X_rdata, family = smf.families.Binomial()).fit()
+  # Null model for Scaled Brier score calculation
+  lrm_null = smf.GLM(data[y], X_rdata.intercept, family = smf.families.Binomial()).fit()
+  
   # Save predictors of the original model
   coeff_apparent = lrm_app.params
   # Calculating the linear predictor (X*beta)
   lp_apparent = np.matmul(X_rdata, coeff_apparent)
   pred_apparent = lrm_app.predict(X_rdata)
+  pred_null = lrm_null.predict(X_rdata.intercept)
   # Apparent C-statistic and discrimination slope
   cstat_app = concordance_index(data[y], lp_apparent)  # c-statistic
   app_out_group = pred_apparent.groupby(data[y]).mean()
   dslope_app = abs(app_out_group[1] - app_out_group[0])
+  bs_app = brier_score_loss(data[y], pred_apparent) 
+  bs_null = brier_score_loss(data[y], pred_null)
+  scaled_bs_app = 1 - bs_app / bs_null
   
   for j in range(B):
     # Bootstrapping development data
@@ -745,6 +760,7 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
     # in every bootstrapped model and in every bootstrapped data
     lp_boot[j] = np.matmul(X_boot[j], coeff_boot[j])
     pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
+    
     # Linear predictor and predicted probabilities 
     # in every bootstrapped model in every data
     lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
@@ -766,10 +782,18 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
     dslope_diff = np.subtract(dslope_boot, dslope_orig)
     dslope_opt = np.mean(dslope_diff)
     
+    # Brier score ---
+    bs_boot[j] = brier_score_loss(bdata[j][y], pred_boot[j])
+    bs_orig[j] = brier_score_loss(rdata[y], pred_orig[j])
+    bs_diff = np.subtract(bs_boot, bs_orig)
+    bs_opt = np.mean(bs_diff)
+    
     res_int = pd.DataFrame(
       {"C-statistic": cstat_app - cstat_opt,
-       "Discrimination slope": dslope_app - dslope_opt},
-       index = [0]
+       "Discrimination slope": dslope_app - dslope_opt,
+       "Brier score": bs_app - bs_opt,
+       "Scaled brier score": 1 - ((bs_app - bs_opt) / bs_null)},
+       index = ["Optimism-corrected bootstrap"]
     )
     
   return(res_int)
@@ -915,13 +939,13 @@ NULL
 </tbody>
 </table>
 
-C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.78
-(95% CI: 0.73-0.84) in the development and validation data,
+C-statistic was 0.82 (95% confidence interval, CI: 0.78-0.85), and 0.79
+(95% CI: 0.72-0.84) in the development and validation data,
 respectively. Internal cross-validation based on optimism-corrected
 bootstrapping showed a C-statistic of 0.81.
 
-Discrimination slope was 0.30 (95% CI: 0.27-0.32), and 0.24 (95% CI:
-0.17-0.29) for the development and validation data, respectively.
+Discrimination slope was 0.30 (95% CI: 0.26-0.34), and 0.24 (95% CI:
+0.18-0.30) for the development and validation data, respectively.
 Internal cross-validation based on optimism-corrected bootstrapping
 showed a discrimination slope of 0.29.
 
@@ -961,7 +985,6 @@ Click to expand code
 
 ``` python
 ## Fitting the logistic regression model ------------------
-# Logistic regression using statsmodels library
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
 X_rdata = X_rdata.assign(intercept = 1.0)
@@ -988,13 +1011,10 @@ lp_vdata = np.matmul(X_vdata, coeff)
 # Validation data --
 # y_val = outcome of the validation data
 # lp_val = linear predictor calculated in the validation data
-# pred_val = estimated predicted probability in the validation data
-val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+val_out =  pd.DataFrame({'y_val' : vdata["tum_res"], 
                          'lp_val' : lp_vdata,
                          'pred_val' : pred_vdata})                      
 val_out = val_out.assign(intercept = 1.0) # Add intercept
-
-
 
 # Calibration intercept (calibration-in-the-large) -------------
 # df_cal_int = pd.concat(y_val, lp_val)
@@ -1088,3 +1108,647 @@ be interpreted as the level of overfitting (slope \<1) or underfitting
 (slope>1). A value of slope smaller than 1 can also be interpreted as
 reflecting a need for shrinkage of regression coefficients in a
 prediction model.
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Calibration slope
+cal_slope = smf.GLM(val_out.y_val, 
+                    val_out[["intercept", "lp_val"]], 
+                    family = smf.families.Binomial())
+res_cal_slope = cal_slope.fit()
+res_cal_slope_summary = res_cal_slope.summary()
+# res_cal_slope_summary
+```
+
+</details>
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Estimate
+</th>
+<th style="text-align:right;">
+2.5 %
+</th>
+<th style="text-align:right;">
+97.5 %
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Calibration slope
+</td>
+<td style="text-align:right;">
+0.74
+</td>
+<td style="text-align:right;">
+0.5
+</td>
+<td style="text-align:right;">
+0.98
+</td>
+</tr>
+</tbody>
+</table>
+
+#### 2.2.3 Moderate calibration
+
+Moderate calibration concerns whether among patients with the same
+predicted risk, the observed event rate equals the predicted risk. A
+graphical assessment of calibration is possible with predictions on the
+x-axis, and the outcome on the y-axis. Perfect predictions should be on
+the 45° line. For binary outcomes, the plot contains only 0 and 1 values
+for the y-axis. Smoothing techniques can be used to estimate the
+observed probabilities of the outcome (p(y=1)) in relation to the
+predicted probabilities, e.g. using the lowess algorithm. The observed
+probabilities can be also estimated using a secondary logistic
+regression model using the predicted probability as a covariate. We can
+assume linearity or a more flexible relation between the covariate and
+the observed probabilties using, for example, splines. We may however
+expect that the specific type of smoothing may affect the graphical
+impression, especially in smaller data sets.
+
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Estimated predicted probabilities by the model in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Create the dataframe including all useful info
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Calibration plot 
+# Method used: The actual probability is estimated using a 'secondary' logistic regression model
+# using the predicted probabilities as a covariate.
+# Non-parametric curve (smooth using lowess) is also used as an alternative method.
+
+pred_val_cal = pd.DataFrame({'pred_val' : pred_vdata})
+pred_val_cal['intercept'] = 1.0
+moderate_cal = smf.GLM(val_out.y_val, 
+                       val_out[["intercept", "pred_val"]], 
+                       family = smf.families.Binomial())
+res_moderate_cal = moderate_cal.fit()
+
+# Estimated the standard error of the predicted probabilities
+# to add confidence bands to the calibration plot estimated using
+# a 'secondary' logistic regression model.
+# We need: 
+# a. matrix of variance and covariance of the 'secondary' logistic model
+# res_moderate_cal.cov_params()
+
+# b. estimate the linear predictor as x*beta
+lp_cal = np.matmul(val_out[["intercept", "pred_val"]],
+                  res_moderate_cal.params)
+
+# Estimating the density 
+dlogis = sp.stats.logistic.pdf(lp_cal) # logistic density function = exp(-xb) / (1 + exp(-xb))**2)
+
+# Estimating the standard error of predicted probabilities
+#   Formula details are in https://blog.methodsconsultants.com/posts/delta-method-standard-errors/
+
+se_fit = [0] * len(vdata)
+for j in range(len(vdata)):
+  se_fit[j] = np.dot(dlogis[j], val_out[["intercept", "pred_val"]].loc[j])
+  se_fit[j] = np.dot(se_fit[j], res_moderate_cal.cov_params())
+  se_fit[j] = np.dot(se_fit[j], val_out[["intercept", "pred_val"]].loc[j].T)
+  se_fit[j] = np.dot(se_fit[j], dlogis[j])
+se_fit = np.sqrt(se_fit)
+# NOTE: I would like to improve and use only matrix operators rather than
+# generalizing a single individual case using for loop
+
+# Lowess
+lowess = smf.nonparametric.lowess
+fit_lowess = lowess(val_out.y_val, 
+                    val_out.pred_val, 
+                    frac = 2/3,
+                    it = 0) # same f and iter parameters as R
+
+# Create df for calibration plot based on secondary log reg
+alpha = 0.05
+df_cal = pd.DataFrame({
+    'obs' :  res_moderate_cal.predict(val_out[["intercept", "pred_val"]]),
+    'pred' : val_out.pred_val,
+    'se_fit' : se_fit,
+    'lower_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) - sp.stats.norm.ppf(1 - alpha / 2) * se_fit,
+    'upper_95' : res_moderate_cal.predict(val_out[["intercept", "pred_val"]]) + sp.stats.norm.ppf(1 - alpha / 2) * se_fit
+})
+
+# Sorting
+df_cal = df_cal.sort_values(by = ['pred'])
+
+# Calibration plots
+p1 = plt.plot(df_cal.pred, df_cal.obs, "--", 
+         label = "Logistic", color = "black")
+p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
+         color = "blue", label = "Non parametric")  
+plt.legend(loc = "upper left")
+p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
+         label = "Logistic", color = "black")
+p4 = plt.plot(df_cal.pred, df_cal.upper_95, "--", 
+         label = "Logistic", color = "black")
+
+plt.xlabel("Predicted probability")
+plt.ylabel("Actual probability")
+plt.title("Calibration plot")
+plt.show()
+plt.clf()
+plt.cla()
+plt.close('all')
+
+# Calibration metrics based on a secondary logistic regression model
+k = 3
+cal_metrics = pd.DataFrame(
+  {'ICI' : np.round(np.mean(abs(df_cal.obs - df_cal.pred)), k),
+   'E50' : np.round(np.median(abs(df_cal.obs - df_cal.pred)), k),
+   'E90' : np.round(np.quantile(abs(df_cal.obs - df_cal.pred), 
+                       0.9, interpolation = 'midpoint'), k)}, 
+  index = ["Calibration measures"]
+)
+```
+
+</details>
+
+<img src="imgs/03_PredLogReg_py/moder_cal-1.png" style="display: block; margin: auto;" />
+
+    ## <string>:4: DeprecationWarning: the `interpolation=` argument to quantile was renamed to `method=`, which has additional options.
+    ## Users of the modes 'nearest', 'lower', 'higher', or 'midpoint' are encouraged to review the method they. (Deprecated NumPy 1.22)
+
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+ICI
+</th>
+<th style="text-align:right;">
+E50
+</th>
+<th style="text-align:right;">
+E90
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Calibration measures
+</td>
+<td style="text-align:right;">
+0.036
+</td>
+<td style="text-align:right;">
+0.031
+</td>
+<td style="text-align:right;">
+0.078
+</td>
+</tr>
+</tbody>
+</table>
+
+Calibration measures (i.e., ICI, E50, E90) using a ‘secondary’ logistic
+regression to estimate the observed probability of the event indicate
+good calibration.  
+Calibration measures might also be calculated using the non-parametric
+method (e.g., lowess) to estimate the observed probability of the event.
+
+### 2.3 Overall performance measures
+
+The overall performance measures generally estimate the distance between
+the predicted outcome and actual outcome.  
+We calculate the Brier Score, and the scaled Brier scale (also known as
+index of prediction accuracy) and the corresponding confidence
+intervals.
+
+Some confidence intervals are calculated using the bootstrap percentile
+method.
+
+<details>
+<summary>
+Click to expand code
+</summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Create dataframe dev_out and val_out containing all info useful
+# to assess prediction performance in the development and in the validation data
+
+# Save estimated predicted probabilities in the development data
+pred_rdata = result_lrm.predict(X_rdata)
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_rdata = np.matmul(X_rdata, coeff)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info 
+# y_dev = outcome of the development
+# lp_dev = linear predictor calculated in the developement data
+# pred_dev = estimated predicted probability in the development data
+dev_out =  pd.DataFrame({'y_dev': rdata["tum_res"], 
+                         'lp_dev' : lp_rdata,
+                         'pred_dev' : pred_rdata})                      
+dev_out = dev_out.assign(intercept = 1.0) # Add intercept
+
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+# Brier Score
+from sklearn.metrics import brier_score_loss
+bs_lrm_dev = brier_score_loss(dev_out.y_dev, dev_out.pred_dev)
+bs_lrm_val = brier_score_loss(val_out.y_val, val_out.pred_val)
+
+
+# Scaled brier score
+# Develop null model and estimate the Brier Score for the null model - development data
+lrm_null_dev = smf.GLM(dev_out.y_dev, dev_out.intercept, 
+                   family = smf.families.Binomial())                  
+result_lrm_null_dev = lrm_null_dev.fit()
+
+dev_out_null = pd.DataFrame(
+  { 'y_dev' : rdata["tum_res"],
+    'lp_null' : [result_lrm_null_dev.params[0]] * len(rdata),
+    'pred_null' : result_lrm_null_dev.predict(dev_out.intercept)}
+)
+bs_lrm_null_dev = brier_score_loss(dev_out_null.y_dev, 
+                               dev_out_null.pred_null)
+
+# Develop null model and estimate the Brier Score for the null model - validation data
+lrm_null_val = smf.GLM(val_out.y_val, val_out.intercept, 
+                   family = smf.families.Binomial())                  
+result_lrm_null_val = lrm_null_val.fit()
+
+val_out_null = pd.DataFrame(
+  { 'y_val' : vdata["tum_res"],
+    'lp_null' : [result_lrm_null_val.params[0]] * len(vdata),
+    'pred_null' : result_lrm_null_val.predict(val_out.intercept)}
+)
+bs_lrm_null_val = brier_score_loss(val_out_null.y_val, 
+                               val_out_null.pred_null)
+ 
+#### Bootstrap percentile confidence intervals
+# Bootstrap confidence intervals for development and validation set
+# NOTE: I need to understand how to set up a random seed to reproduce
+# the same boostrapped data
+B = 2000
+bdev_out = {}
+bval_out = {}
+bdev_out_null = {}
+bval_out_null = {}
+boot_brier_dev = [0] * B
+boot_brier_null_dev = [0] * B
+boot_brier_val = [0] * B
+boot_brier_null_val = [0] * B
+
+for j in range(B): 
+  
+  bdev_out[j] = sk.utils.resample(dev_out, 
+      replace = True, 
+      n_samples = len(dev_out)) # bootstrapping development data
+      
+  bval_out[j] = sk.utils.resample(val_out, 
+      replace = True, 
+      n_samples = len(val_out)) # bootstrapping validation data   
+      
+  bdev_out_null[j] = sk.utils.resample(dev_out_null, 
+      replace = True, 
+      n_samples = len(dev_out_null))
+      
+  bval_out_null[j] = sk.utils.resample(val_out_null, 
+      replace = True, 
+      n_samples = len(val_out_null))
+      
+  boot_brier_dev[j] = brier_score_loss(bdev_out[j].y_dev, 
+                                       bdev_out[j].pred_dev)
+  
+  boot_brier_null_dev[j] = brier_score_loss(bdev_out_null[j].y_dev, 
+                                            bdev_out_null[j].pred_null)
+                                            
+  boot_brier_val[j] = brier_score_loss(bval_out[j].y_val, 
+                                       bval_out[j].pred_val)
+  
+  boot_brier_null_val[j] = brier_score_loss(bval_out_null[j].y_val, 
+                                            bval_out_null[j].pred_null)
+  
+scaled_brier_boot_dev = 1 - (np.array(boot_brier_dev) / np.array(boot_brier_null_dev))
+scaled_brier_boot_val = 1 - (np.array(boot_brier_val) / np.array(boot_brier_null_val))
+
+# Overall performance results
+k = 2
+overall_metrics = np.reshape(
+  (round(bs_lrm_dev, k),
+   round(np.percentile(boot_brier_dev, q = 2.5), k),
+   round(np.percentile(boot_brier_dev, q = 97.5), k), 
+   
+   round(np.float64(res_int["Brier score"]), k),
+   None,
+   None,
+   
+   round(bs_lrm_val, k),
+   round(np.percentile(boot_brier_val, q = 2.5), k),
+   round(np.percentile(boot_brier_val, q = 97.5), k),
+   
+   
+   round(1 - bs_lrm_dev / bs_lrm_null_dev, k),
+   round(np.percentile(scaled_brier_boot_dev, q = 2.5), k),
+   round(np.percentile(scaled_brier_boot_dev, q = 97.5), k),
+   
+   round(np.float64(res_int["Scaled brier score"]), k),
+   None,
+   None,
+   
+   round(1 - bs_lrm_val / bs_lrm_null_val, k),
+   round(np.percentile(scaled_brier_boot_val, q = 2.5), k),
+   round(np.percentile(scaled_brier_boot_val, q = 97.5), k)),
+   
+   (2, 9)
+)
+
+overall_metrics = pd.DataFrame(overall_metrics, 
+                               columns = np.tile(["Estimate", "2.5 %", "97.5 %"], 3), 
+                               index = ["Brier Score", "Scaled Brier"])
+```
+
+</details>
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="1">
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Apparent
+
+</div>
+
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Internal
+
+</div>
+
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="3">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+External
+
+</div>
+
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+<th style="text-align:left;">
+Estimate
+</th>
+<th style="text-align:left;">
+2.5 %
+</th>
+<th style="text-align:left;">
+97.5 %
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Brier Score
+</td>
+<td style="text-align:left;">
+0.17
+</td>
+<td style="text-align:left;">
+0.16
+</td>
+<td style="text-align:left;">
+0.19
+</td>
+<td style="text-align:left;">
+0.18
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+0.16
+</td>
+<td style="text-align:left;">
+0.14
+</td>
+<td style="text-align:left;">
+0.19
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Scaled Brier
+</td>
+<td style="text-align:left;">
+0.3
+</td>
+<td style="text-align:left;">
+0.23
+</td>
+<td style="text-align:left;">
+0.36
+</td>
+<td style="text-align:left;">
+0.28
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+NULL
+</td>
+<td style="text-align:left;">
+0.2
+</td>
+<td style="text-align:left;">
+0.02
+</td>
+<td style="text-align:left;">
+0.35
+</td>
+</tr>
+</tbody>
+</table>
+
+## Goal 3 - Clinical utility
+
+Discrimination and calibration measures are essential to assess the
+prediction performance but insufficient to evaluate the potential
+clinical utility of a risk prediction model for decision making. When
+new markers are available, clinical utility assessment evaluates whether
+the extended model helps to improve decision making.  
+Clinical utility is measured by the net benefit that includes the number
+of true positives and the number of false positives. Generally, in
+medicine, clinicians accepts to treat a certain number of patients for
+which interventions are unnecessary to be event free for a given time
+horizon. So, false negatives (the harm of not being event free for a
+given time horizon) are more important than false positives (the harm of
+unnecessary interventions). Thus, net benefit is the number of true
+positives classifications minus the false positives classifications
+weighted by a factor related to the harm of not preventing the event
+versus unnecessary interventions. The weighting is derived from the
+threshold probability to the event of interest (e.g. residual tumor).
+For example, a threshold of 20% implies that additional interventions
+for 4 patients of whom one would have experience the event if untreated
+is acceptable (thus treating 3 unnecessary patients). This strategy is
+compared with the strategies of treat all and treat none patients. If
+overtreatment is harmful, a higher threshold should be used.
+
+The net benefit is calculated as:
+
+<img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BTP%7D%7Bn%7D-%5Cfrac%7BFP%7D%7Bn%7D*%5Cfrac%7Bp_t%7D%7B1-p_t%7D%7D">
+
+*TP*=true positive patients  
+*FP*=false positive patients  
+*n*=number of patients and *p*<sub>t</sub> is the risk threshold.
+
+The decision curve is calculated as follows:
+
+1.  Choose a time horizon;
+2.  Specify a risk threshold which reflects the ratio between harms and
+    benefit of an additional intervention;
+3.  Calculate the number of true positive and false positive given the
+    threshold specified in (2);
+4.  Calculate the net benefit of the risk prediction model;
+5.  Plot net benefit on the *y-axis* against the risk threshold on the
+    *x-axis*;
+6.  Repeat steps 2-4 for each model consideration;
+7.  Repeat steps 2-4 for the strategy of assuming all patients are
+    treated;
+8.  Draw a straight line parallel to the *x-axis* at y=0 representing
+    the net benefit associated with the strategy of assuming that all
+    patients are not treated.
+
+Given some thresholds, the model/strategy with higher net benefit
+represents the one that potentially improves clinical decision making.
+However, poor discrimination and calibration lead to lower net benefit.
+
+More details are available in the paper of Vickers et
+al. [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577036/).
+
+<details>
+<summary>
+Click to expand code
+</summary>
