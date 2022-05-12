@@ -991,7 +991,7 @@ Discrimination slope
 0.27
 </td>
 <td style="text-align:right;">
-0.33
+0.32
 </td>
 <td style="text-align:right;">
 0.29
@@ -1006,10 +1006,10 @@ NA
 0.24
 </td>
 <td style="text-align:right;">
-0.20
+0.19
 </td>
 <td style="text-align:right;">
-0.28
+0.33
 </td>
 </tr>
 </tbody>
@@ -1162,6 +1162,7 @@ Click to expand code
 
 ``` r
 # Models
+vdata$y <- as.numeric(vdata$tum_res) - 1
 dd <- datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
 fit_lrm <- lrm(tum_res ~ 
@@ -1207,10 +1208,10 @@ Calibration slope
 0.74
 </td>
 <td style="text-align:right;">
--0.19
+0.51
 </td>
 <td style="text-align:right;">
-0.51
+0.99
 </td>
 </tr>
 </tbody>
