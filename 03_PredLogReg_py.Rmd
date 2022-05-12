@@ -54,14 +54,15 @@ pacman::p_load(
 import warnings
 warnings.simplefilter(action = "ignore", category = FutureWarning)
 warnings.filterwarnings("ignore", category = RuntimeWarning) # suppressing warnings
-import pandas as pd
+import pandas as pd # For data frames
 import numpy as np
 import scipy as sp
 import tableone as tb
-import statsmodels.api as smf
-import matplotlib.pyplot as plt
-import sklearn as sk
-import seaborn as sns
+import statsmodels.api as smf # For models
+import matplotlib.pyplot as plt # For plots
+import sklearn as sk # Also for bootstrap (resample)
+import seaborn as sns # For plots
+from sklearn.metrics import brier_score_loss # For Brier score calculation
 
 
 # Get work directory
