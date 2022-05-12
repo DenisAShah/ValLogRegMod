@@ -1088,26 +1088,36 @@ val_out = val_out.assign(intercept = 1.0) # Add intercept
 
 # Brier Score
 from sklearn.metrics import brier_score_loss
-bs_lrm_dev = brier_score_loss(val_out.y_val, val_out.pred_val)
+bs_lrm_dev = brier_score_loss(dev_out.y_dev, dev_out.pred_dev)
 bs_lrm_val = brier_score_loss(val_out.y_val, val_out.pred_val)
 
 
 # Scaled brier score
+# Develop null model and estimate the Brier Score for the null model - development data
+lrm_null_dev = smf.GLM(dev_out.y_dev, dev_out.intercept, 
+                   family = smf.families.Binomial())                  
+result_lrm_null_dev = lrm_null_dev.fit()
+
+dev_out_null = pd.DataFrame(
+  { 'y_dev' : rdata["tum_res"],
+    'lp_null' : [result_lrm_null_dev.params[0]] * len(rdata),
+    'pred_null' : result_lrm_null_dev.predict(dev_out.intercept)}
+)
+bs_lrm_null_dev = brier_score_loss(dev_out_null.y_dev, 
+                               dev_out_null.pred_null)
+
 # Develop null model and estimate the Brier Score for the null model - validation data
 lrm_null_val = smf.GLM(val_out.y_val, val_out.intercept, 
                    family = smf.families.Binomial())                  
 result_lrm_null_val = lrm_null_val.fit()
 
 val_out_null = pd.DataFrame(
-  { 
-    'y_val' : vdata["tum_res"],
+  { 'y_val' : vdata["tum_res"],
     'lp_null' : [result_lrm_null_val.params[0]] * len(vdata),
-    'pred_null' : np.exp([result_lrm_null_val.params[0]] * len(vdata)) / (1 + np.exp([result_lrm_null_val.params[0]] * len(vdata)))
-  }
+    'pred_null' : result_lrm_null_val.predict(val_out.intercept)}
 )
 bs_lrm_null_val = brier_score_loss(val_out_null.y_val, 
                                val_out_null.pred_null)
- 
  
 #### Bootstrap percentile confidence intervals
 # Bootstrap confidence intervals for development and validation set
@@ -1154,11 +1164,11 @@ scaled_brier_boot = 1 - (np.array(boot_brier) / np.array(boot_brier_null))
 
 # Overall performance results
 overall_metrics = np.reshape(
-  (bs_lrm,
+  (bs_lrm_dev,
    np.percentile(boot_brier, q = 2.5),
    np.percentile(boot_brier, q = 97.5), 
    
-   1 - bs_lrm / bs_lrm_null,
+   1 - bs_lrm_dev / bs_lrm_null_dev,
    np.percentile(scaled_brier_boot, q = 2.5),
    np.percentile(scaled_brier_boot, q = 97.5)),
    
