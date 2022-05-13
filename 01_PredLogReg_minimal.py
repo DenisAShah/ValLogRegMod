@@ -234,7 +234,9 @@ df_cal = df_cal.sort_values(by = ['pred'])
 p1 = plt.plot(df_cal.pred, df_cal.obs, "--", 
          label = "Logistic", color = "black")
 p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
-         color = "blue", label = "Non parametric")  
+         color = "blue", label = "Non parametric") 
+plt.axline(xy1 = (0, 0), xy2 = (1, 1), linestyle = "-.", color = "r", 
+          label = "Perfect calibration")
 plt.legend(loc = "upper left")
 p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
          label = "Logistic", color = "black")
