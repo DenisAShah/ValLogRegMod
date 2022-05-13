@@ -1338,13 +1338,11 @@ val_out = val_out.assign(intercept = 1.0) # Add intercept
 # 
 
 def dca(outcome, prediction, xstart = 0 , xstop  = 1, xby = 0.01):
-
   thresholds = np.arange(xstart, xstop, step = xby)
   leng = np.arange(0, len(thresholds), step = 1)
   f_all = np.mean(outcome)
   NB_all = [0] * len(thresholds)
   NB = [0] * len(thresholds)
-
   for j in leng:
     NB_all[j] = f_all - (1 - f_all) * (thresholds[j] / (1 - thresholds[j]))
     tdata = np.int64(outcome[prediction > thresholds[j]])
@@ -1360,6 +1358,39 @@ def dca(outcome, prediction, xstart = 0 , xstop  = 1, xby = 0.01):
     }
   )
   return(df_dca)
+
+# DCA - development data
+dca_dev = dca(outcome = dev_out.y_dev, prediction = dev_out.pred_dev)
+dca_val = dca(outcome = val_out.y_val, prediction = val_out.pred_val)
+
+
+# Plot decision curves
+# Plotting
+fig, (ax1, ax2) = plt.subplots(1, 2)
+
+# First plot - predictor: sq ---
+ax1.plot(df_rcs_sq.sq, df_rcs_sq.lp_rcs_sq, "-", 
+         color = "black")
+ax1.plot(df_rcs_sq.sq, df_rcs_sq.lower_95, "--", 
+         color = "black")
+ax1.plot(df_rcs_sq.sq, df_rcs_sq.upper_95, "--", 
+         color = "black")
+plt.setp(ax1, xlabel = 'Square root of postchemotherapy mass size')
+plt.setp(ax1, ylabel = 'log Odds')
+
+# Second plot - predictor: reduc10 ---
+ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.lp_rcs_reduc10, "-", 
+         color = "black")
+ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.lower_95, "--", 
+         color = "black")
+ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.upper_95, "--", 
+         color = "black")
+plt.setp(ax2, xlabel = 'Reduction in mass size per 10%')
+plt.show()
+plt.clf()
+plt.cla()
+plt.close('all')
+
 
 # Plot decision curves
 plt.plot(df_dca.threshold, df_dca.NB, "-", color = "black", label = "Prediction model")
