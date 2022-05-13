@@ -385,8 +385,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            5
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
-    ## Date:                Thu, 12 May 2022   Deviance:                       561.87
-    ## Time:                        17:33:12   Pearson chi2:                     520.
+    ## Date:                Fri, 13 May 2022   Deviance:                       561.87
+    ## Time:                        12:34:31   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -414,8 +414,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            6
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
-    ## Date:                Thu, 12 May 2022   Deviance:                       537.21
-    ## Time:                        17:33:13   Pearson chi2:                     546.
+    ## Date:                Fri, 13 May 2022   Deviance:                       537.21
+    ## Time:                        12:34:32   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -1305,12 +1305,13 @@ p1 = plt.plot(df_cal.pred, df_cal.obs, "--",
          label = "Logistic", color = "black")
 p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
          color = "blue", label = "Non parametric")  
+plt.axline(xy1 = (0, 0), xy2 = (1, 1), linestyle = "-.", color = "r", 
+          label = "Perfect calibration")
 plt.legend(loc = "upper left")
 p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
          label = "Logistic", color = "black")
 p4 = plt.plot(df_cal.pred, df_cal.upper_95, "--", 
          label = "Logistic", color = "black")
-
 plt.xlabel("Predicted probability")
 plt.ylabel("Actual probability")
 plt.title("Calibration plot")
@@ -1752,3 +1753,233 @@ al. [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2577036/).
 <summary>
 Click to expand code
 </summary>
+
+``` python
+## Fitting the logistic regression model ------------------
+y = rdata["tum_res"]
+X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
+X_rdata = X_rdata.assign(intercept = 1.0)
+
+lrm = smf.GLM(y, X_rdata, family = smf.families.Binomial())
+result_lrm = lrm.fit()
+
+# Create dataframe dev_out and val_out containing all info useful
+# to assess prediction performance in the development and in the validation data
+
+# Save estimated predicted probabilities in the development data
+pred_rdata = result_lrm.predict(X_rdata)
+
+# Save predictors of the validation model
+X_vdata = vdata         
+X_vdata = X_vdata.assign(intercept = 1.0)
+X_vdata = X_vdata[["ter_pos_Yes", "preafp_Yes","prehcg_Yes", "sqpost", "reduc10", "intercept"]]
+
+# Save estimated predicted probabilities in the validation data
+pred_vdata = result_lrm.predict(X_vdata)
+
+# Save coefficients of the developed model
+coeff = result_lrm.params
+
+# Calculating the linear predictor (X*beta)
+lp_rdata = np.matmul(X_rdata, coeff)
+lp_vdata = np.matmul(X_vdata, coeff)
+
+# Create the dataframe including all useful info 
+# y_dev = outcome of the development
+# lp_dev = linear predictor calculated in the developement data
+# pred_dev = estimated predicted probability in the development data
+dev_out =  pd.DataFrame({'y_dev': rdata["tum_res"], 
+                         'lp_dev' : lp_rdata,
+                         'pred_dev' : pred_rdata})                      
+dev_out = dev_out.assign(intercept = 1.0) # Add intercept
+
+# Validation data --
+# y_val = outcome of the validation data
+# lp_val = linear predictor calculated in the validation data
+# pred_val = estimated predicted probability in the validation data
+val_out =  pd.DataFrame({'y_val': vdata["tum_res"], 
+                         'lp_val' : lp_vdata,
+                         'pred_val' : pred_vdata})                      
+val_out = val_out.assign(intercept = 1.0) # Add intercept
+
+
+
+# Clinical utility ------
+# Decision curve analysis function for binary outcomes
+#
+# Calculate net benefit to draw decision curves
+# 
+# @type  outcome:       integer or pandas.core.series.Series
+# @param outcome:       binary outcome
+# @type  predictions:   float64 or  pandas.core.series.Series
+# @param predictions:   estimated risk based on logistic regression model  or other models
+# @type  xstart:        integer
+# @param xstart:        start for the threshold calculation (default = 0)
+# @type  xstop:         integer
+# @param xstop:         stop for the threshold calculation (default = 1)
+# @type  xby:           float
+# @param xby:           step for the threshold (default = 0.01)
+# @rtype:               pandas.core.frame.DataFrame 
+# @return:              pandas.core.frame.DataFrame including threshold and corresponding net benefit
+#                       for the prediction model and for 'Treat all' strategy.
+# 
+
+def dca(outcome, prediction, xstart = 0 , xstop  = 1, xby = 0.01):
+  thresholds = np.arange(xstart, xstop, step = xby)
+  leng = np.arange(0, len(thresholds), step = 1)
+  f_all = np.mean(outcome)
+  NB_all = [0] * len(thresholds)
+  NB = [0] * len(thresholds)
+  for j in leng:
+    NB_all[j] = f_all - (1 - f_all) * (thresholds[j] / (1 - thresholds[j]))
+    tdata = np.int64(outcome[prediction > thresholds[j]])
+    TP = np.sum(tdata)
+    FP = (tdata == 0).sum()
+    NB[j]= (TP / len(outcome)) - (FP / len(outcome)) * (thresholds[j] / (1 - thresholds[j]))
+  
+# Create dataframe
+  df_dca = pd.DataFrame({
+      'threshold' : thresholds,
+      'NB_all' : NB_all,
+      'NB' : NB
+    }
+  )
+  return(df_dca)
+
+# DCA - development data
+dca_dev = dca(outcome = dev_out.y_dev, prediction = dev_out.pred_dev)
+dca_val = dca(outcome = val_out.y_val, prediction = val_out.pred_val)
+
+
+# Plot decision curves
+fig, (ax1, ax2) = plt.subplots(1, 2)
+fig.tight_layout(pad = 2.5)  # for margins
+# Decision curve - Development data 
+ax1.plot(dca_dev.threshold, dca_dev.NB, "-", color = "black", label = "Prediction model")
+ax1.plot(dca_dev.threshold, dca_dev.NB_all, color = "gray", label = "Treat all")
+ax1.set_xlim([0, 1])
+ax1.set_ylim([-0.05, 0.8])
+plt.setp(ax1, xlabel = 'Threshold')
+plt.setp(ax1, ylabel = 'Net Benefit')
+ax1.title.set_text("Decision curves - development data") 
+ax1.axhline(y = 0, linestyle = 'dashdot', color = 'black', label = "Treat none")
+ax1.legend(loc = "upper right")
+
+# Decision curve - Validation data 
+ax2.plot(dca_val.threshold, dca_val.NB, "-", color = "black", label = "Prediction model")
+ax2.plot(dca_val.threshold, dca_val.NB_all, color = "gray", label = "Treat all")
+ax2.set_xlim([0, 1])
+ax2.set_ylim([-0.05, 0.8])
+plt.setp(ax2, xlabel = 'Threshold')
+plt.setp(ax2, ylabel = 'Net Benefit')
+plt.title("Decision curves - validation data")
+plt.axhline(y = 0, linestyle = 'dashdot', color = 'black', label = "Treat none")
+ax2.legend(loc = "upper right")
+plt.show()
+plt.clf()
+plt.cla()
+plt.close('all')
+
+# NEXT STEPS ---
+# extend function to calculate restricted cubic spline with more than 3 knots
+# flexible calibration plot including splines
+# refine dca function and internal validation function
+```
+
+</details>
+
+    ## (0.0, 1.0)
+
+    ## (-0.05, 0.8)
+
+    ## (0.0, 1.0)
+
+    ## (-0.05, 0.8)
+
+<img src="imgs/03_PredLogReg_py/dca-1.png" style="display: block; margin: auto;" />
+
+<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="empty-cells: hide;border-bottom:hidden;" colspan="2">
+</th>
+<th style="border-bottom:hidden;padding-bottom:0; padding-left:3px;padding-right:3px;text-align: center; " colspan="2">
+
+<div style="border-bottom: 1px solid #ddd; padding-bottom: 5px; ">
+
+Net benefit
+
+</div>
+
+</th>
+</tr>
+<tr>
+<th style="text-align:left;">
+</th>
+<th style="text-align:right;">
+Threshold
+</th>
+<th style="text-align:right;">
+Treat all
+</th>
+<th style="text-align:right;">
+Prediction model
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Development data
+</td>
+<td style="text-align:right;">
+0.2
+</td>
+<td style="text-align:right;">
+0.437
+</td>
+<td style="text-align:right;">
+0.439
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Validation data
+</td>
+<td style="text-align:right;">
+0.2
+</td>
+<td style="text-align:right;">
+0.652
+</td>
+<td style="text-align:right;">
+0.653
+</td>
+</tr>
+</tbody>
+</table>
+
+A cut-off of 20% implies a relative weight of 1:4 for false-positive
+decisions against true-positive decisions. In the development data, the
+Net Benefit (NB) was 0.439. This means that the model might identify
+approximately 44 patients out of 100 who may have residuals tumors and
+then tumor resection might be useful. If we would do resection in all,
+the NB would however be similar: 0.437 so the clinical utility of the
+model at 20% threshold is very limited.
+
+Similar results were estimated during external validation. In the
+validation data, the NB of the risk regression model was 0.653. If we
+would do resection in all patients, the NB would be similar 0.652.
+
+However, the decision curve shows that the NB would be much larger for
+higher threshold values, i.e. patients accepting higher risks of
+residual tumor.
+
+Moreover, potential net benefit can be defined in terms of reduction of
+avoidable interventions (e.g tumor resection per 100 patients) by:
+
+<img src="https://render.githubusercontent.com/render/math?math=%5Chuge%7B%5Cfrac%7BNB_%7Bmodel%7D%20-%20NB_%7Ball%7D%7D%7B(p_t%2F%20(1-p_t))%7D*100%7D%0A">
+
+where *NB*<sub>model</sub> is the net benefit of the prediction model,
+*NB*<sub>all</sub> is the net benefit of the strategy treat all and
+*p*<sub>*t*</sub> is the risk threshold.
