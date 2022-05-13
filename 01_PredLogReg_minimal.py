@@ -333,7 +333,7 @@ for j in leng:
   tdata = val_out[val_out["pred_val"] > thresholds[j]]
   TP = tdata.y_val.sum() # or np.sum(tdata["y_val"])
   FP = (tdata["y_val"] == 0).sum()
-  NB[j]= (TP / len(tdata)) - (FP / len(tdata)) * (thresholds[j] / (1 - thresholds[j]))
+  NB[j]= (TP / len(val_out)) - (FP / len(val_out)) * (thresholds[j] / (1 - thresholds[j]))
   
   
 # Create dataframe
@@ -345,14 +345,15 @@ df_dca = pd.DataFrame({
 )
 
 # Plot decision curves
-plt.plot(df_dca.threshold, df_dca.NB, "-", color = "black")
-plt.plot(df_dca.threshold, df_dca.NB_all, color = "gray")
+plt.plot(df_dca.threshold, df_dca.NB, "-", color = "black", label = "Prediction model")
+plt.plot(df_dca.threshold, df_dca.NB_all, color = "gray", label = "Treat all")
 plt.xlim([0, 1])
 plt.ylim([-0.05, 0.8])
 plt.xlabel("Threshold")
 plt.ylabel("Net Benefit")
-plt.title("Decision curve")
-plt.axhline(y = 0, linestyle = 'dashdot', color = 'black')
+plt.title("Decision curve - validation data")
+plt.axhline(y = 0, linestyle = 'dashdot', color = 'black', label = "Treat none")
+plt.legend(loc = "upper right")
 plt.show()
 plt.show()
 plt.clf()
