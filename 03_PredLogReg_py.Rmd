@@ -1014,6 +1014,8 @@ p1 = plt.plot(df_cal.pred, df_cal.obs, "--",
          label = "Logistic", color = "black")
 p2 = plt.plot(fit_lowess[:, 0], fit_lowess[:, 1], "-",
          color = "blue", label = "Non parametric")  
+plt.axline(xy1 = (0, 0), xy2 = (1, 1), linestyle = "-.", color = "r", 
+          label = "Perfect calibration")
 plt.legend(loc = "upper left")
 p3 = plt.plot(df_cal.pred, df_cal.lower_95, "--", 
          label = "Logistic", color = "black")
@@ -1365,48 +1367,38 @@ dca_val = dca(outcome = val_out.y_val, prediction = val_out.pred_val)
 
 
 # Plot decision curves
-# Plotting
 fig, (ax1, ax2) = plt.subplots(1, 2)
+fig.tight_layout(pad = 2.5)  # for margins
+# Decision curve - Development data 
+ax1.plot(dca_dev.threshold, dca_dev.NB, "-", color = "black", label = "Prediction model")
+ax1.plot(dca_dev.threshold, dca_dev.NB_all, color = "gray", label = "Treat all")
+ax1.set_xlim([0, 1])
+ax1.set_ylim([-0.05, 0.8])
+plt.setp(ax1, xlabel = 'Threshold')
+plt.setp(ax1, ylabel = 'Net Benefit')
+ax1.title.set_text("Decision curves - development data") 
+ax1.axhline(y = 0, linestyle = 'dashdot', color = 'black', label = "Treat none")
+ax1.legend(loc = "upper right")
 
-# First plot - predictor: sq ---
-ax1.plot(df_rcs_sq.sq, df_rcs_sq.lp_rcs_sq, "-", 
-         color = "black")
-ax1.plot(df_rcs_sq.sq, df_rcs_sq.lower_95, "--", 
-         color = "black")
-ax1.plot(df_rcs_sq.sq, df_rcs_sq.upper_95, "--", 
-         color = "black")
-plt.setp(ax1, xlabel = 'Square root of postchemotherapy mass size')
-plt.setp(ax1, ylabel = 'log Odds')
-
-# Second plot - predictor: reduc10 ---
-ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.lp_rcs_reduc10, "-", 
-         color = "black")
-ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.lower_95, "--", 
-         color = "black")
-ax2.plot(df_rcs_rd.reduc10, df_rcs_rd.upper_95, "--", 
-         color = "black")
-plt.setp(ax2, xlabel = 'Reduction in mass size per 10%')
-plt.show()
-plt.clf()
-plt.cla()
-plt.close('all')
-
-
-# Plot decision curves
-plt.plot(df_dca.threshold, df_dca.NB, "-", color = "black", label = "Prediction model")
-plt.plot(df_dca.threshold, df_dca.NB_all, color = "gray", label = "Treat all")
-plt.xlim([0, 1])
-plt.ylim([-0.05, 0.8])
-plt.xlabel("Threshold")
-plt.ylabel("Net Benefit")
-plt.title("Decision curve - validation data")
+# Decision curve - Validation data 
+ax2.plot(dca_val.threshold, dca_val.NB, "-", color = "black", label = "Prediction model")
+ax2.plot(dca_val.threshold, dca_val.NB_all, color = "gray", label = "Treat all")
+ax2.set_xlim([0, 1])
+ax2.set_ylim([-0.05, 0.8])
+plt.setp(ax2, xlabel = 'Threshold')
+plt.setp(ax2, ylabel = 'Net Benefit')
+plt.title("Decision curves - validation data")
 plt.axhline(y = 0, linestyle = 'dashdot', color = 'black', label = "Treat none")
-plt.legend(loc = "upper right")
-plt.show()
+ax2.legend(loc = "upper right")
 plt.show()
 plt.clf()
 plt.cla()
 plt.close('all')
+
+# NEXT STEPS ---
+# extend function to calculate restricted cubic spline with more than 3 knots
+# flexible calibration plot including splines
+# refine dca function and internal validation function
 ```
 </details>
 
@@ -1415,19 +1407,27 @@ plt.close('all')
 
 ```{r, res_dca, fig.align='center',echo=FALSE}
 
-readoff_dca <- rbind.data.frame(
-  dca_rdata$net.benefit[dca_rdata$net.benefit$threshold == 0.2,],
-  dca_vdata$net.benefit[dca_vdata$net.benefit$threshold == 0.2,]
+readoff_dca <- matrix(c(
+  py$dca_dev$threshold[py$dca_dev$threshold == 0.2],
+  py$dca_dev$NB_all[py$dca_dev$threshold == 0.2],
+  py$dca_dev$NB[py$dca_dev$threshold == 0.2],
+  
+  py$dca_val$threshold[py$dca_val$threshold == 0.2],
+  py$dca_val$NB_all[py$dca_dev$threshold == 0.2],
+  py$dca_val$NB[py$dca_val$threshold == 0.2]),
+  
+  ncol = 3,
+  nrow = 2,
+  byrow = T,
+  dimnames = list(c("Development data", "Validation data"), 
+                  c("Threshold", "Treat all", "Prediction model"))
 )
-readoff_dca$none <- NULL
 
-colnames(readoff_dca) <- c("Threshold", "Treat all", "Model")
-rownames(readoff_dca) <- NULL
 readoff_dca <- round(readoff_dca, 3)
 
 kable(readoff_dca) |>
   kable_styling("striped", position = "center") |>
-  add_header_above(c(" " = 1, 
+  add_header_above(c(" " = 2, 
                      "Net benefit" = 2))
 
 ```
