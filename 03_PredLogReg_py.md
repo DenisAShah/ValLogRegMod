@@ -385,8 +385,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            5
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -280.94
-    ## Date:                Fri, 13 May 2022   Deviance:                       561.87
-    ## Time:                        12:34:31   Pearson chi2:                     520.
+    ## Date:                Thu, 26 May 2022   Deviance:                       561.87
+    ## Time:                        16:51:05   Pearson chi2:                     520.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.2908
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -414,8 +414,8 @@ resection.
     ## Model Family:                Binomial   Df Model:                            6
     ## Link Function:                  Logit   Scale:                          1.0000
     ## Method:                          IRLS   Log-Likelihood:                -268.61
-    ## Date:                Fri, 13 May 2022   Deviance:                       537.21
-    ## Time:                        12:34:32   Pearson chi2:                     546.
+    ## Date:                Thu, 26 May 2022   Deviance:                       537.21
+    ## Time:                        16:51:06   Pearson chi2:                     546.
     ## No. Iterations:                     5   Pseudo R-squ. (CS):             0.3222
     ## Covariance Type:            nonrobust                                         
     ## ===============================================================================
@@ -762,7 +762,7 @@ def bootstrap_cv_lrm(data, y, X, B = 2000):
     pred_boot[j] = lrm_boot[j].fit().predict(X_boot[j])
     
     # Linear predictor and predicted probabilities 
-    # in every bootstrapped model in every data
+    # in every bootstrapped model in the original data
     lp_orig[j] = np.matmul(X_rdata, coeff_boot[j])
     pred_orig[j] = lrm_boot[j].fit().predict(X_rdata)
     
@@ -1269,7 +1269,8 @@ dlogis = sp.stats.logistic.pdf(lp_cal) # logistic density function = exp(-xb) / 
 
 # Estimating the standard error of predicted probabilities
 #   Formula details are in https://blog.methodsconsultants.com/posts/delta-method-standard-errors/
-
+# In R: dlogis(xb) %*% t(x) %*% vcov(trump_model) %*% x %*% dlogis(xb) %>% sqrt
+  
 se_fit = [0] * len(vdata)
 for j in range(len(vdata)):
   se_fit[j] = np.dot(dlogis[j], val_out[["intercept", "pred_val"]].loc[j])
