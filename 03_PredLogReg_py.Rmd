@@ -917,7 +917,7 @@ the observed probabilities of the outcome (p(y=1)) in relation to the predicted 
 
 <details>
   <summary>Click to expand code</summary>
-```{python, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
+```{python, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE, fig.width=5, fig.height=5}
 ## Fitting the logistic regression model ------------------
 y = rdata["tum_res"]
 X_rdata = rdata[["ter_pos_Yes", "preafp_Yes", "prehcg_Yes", "sqpost", "reduc10"]]
@@ -1041,7 +1041,7 @@ cal_metrics = pd.DataFrame(
 )
 ```
 </details>
-```{python moder_cal, fig.align='center', warning=FALSE, eval=TRUE, fig.width=6, fig.height=6}
+```{python, moder_cal, fig.align='center', warning=FALSE, eval=TRUE, fig.width=5, fig.height=5}
 ```
 
 ```{r, res_numcal_r, message=FALSE,warning=FALSE, fig.align='center',include=TRUE, echo=FALSE}
