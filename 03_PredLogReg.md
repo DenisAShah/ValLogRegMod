@@ -998,13 +998,13 @@ Discrimination slope
 0.30
 </td>
 <td style="text-align:right;">
-0.25
+0.26
 </td>
 <td style="text-align:right;">
-0.33
+0.34
 </td>
 <td style="text-align:right;">
-0.29
+0.30
 </td>
 <td style="text-align:right;">
 NA
@@ -1016,10 +1016,10 @@ NA
 0.24
 </td>
 <td style="text-align:right;">
-0.18
+0.19
 </td>
 <td style="text-align:right;">
-0.30
+0.29
 </td>
 </tr>
 </tbody>
@@ -1303,7 +1303,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(cal_lowess,
      type = "l",
      xlim = c(0, 1),
-     ylim = c(-.1, 1),
+     ylim = c(0, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",
@@ -1576,7 +1576,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(cal_lowess,
      type = "l",
      xlim = c(0, 1),
-     ylim = c(-.1, 1),
+     ylim = c(0, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",

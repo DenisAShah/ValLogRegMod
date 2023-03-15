@@ -611,7 +611,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(cal_lowess,
      type = "l",
      xlim = c(0, 1),
-     ylim = c(-.1, 1),
+     ylim = c(0, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",

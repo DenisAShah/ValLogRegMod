@@ -114,7 +114,7 @@ par(xaxs = "i", yaxs = "i", las = 1)
 plot(lowess(vdata$pred, vdata$y, iter = 0),
      type = "l",
      xlim = c(0, 1),
-     ylim = c(-.1, 1),
+     ylim = c(0, 1),
      xlab = "Predicted probability",
      ylab = "Actual probability",
      bty = "n",

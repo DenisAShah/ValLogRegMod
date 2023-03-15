@@ -63,19 +63,19 @@ bootstrap_cv_lrm <- function(db,
   b <- a |> left_join(db_tbl)
   
   # Create optimism-corrected performance measures
-  b <- b |> mutate(
-    lrm_boot = map(
+  b <- b |> dplyr::mutate(
+    lrm_boot = purrr::map(
       boot_data,
-      ~ lrm(frm_model, data = ., x = T, y = T)
+      ~ rms::lrm(frm_model, data = ., x = T, y = T)
     ),
     
-    lrm_apparent = map(
+    lrm_apparent = purrr::map(
       orig_data,
-      ~ lrm(frm_model, data = ., x = T, y = T)
+      ~ rms::lrm(frm_model, data = ., x = T, y = T)
     ),
     
     # Discrimination slope
-    dslope_app = map2_dbl(
+    dslope_app = purrr::map2_dbl(
       orig_data, lrm_apparent,
       function(.x, .y, new_data = .x, k = 3){
         pred <- predict(.y, 
@@ -113,7 +113,7 @@ bootstrap_cv_lrm <- function(db,
       ),
       
       dslope_boot =
-        map2_dbl(
+        purrr::map2_dbl(
           boot_data, lrm_boot,
           
           function(.x, .y, new_data = .x, k = 3){
@@ -130,7 +130,7 @@ bootstrap_cv_lrm <- function(db,
             return(dslope)
           }),
           
-      dslope_diff = map2_dbl(
+      dslope_diff = purrr::map2_dbl(
           dslope_boot, dslope_orig,
           function(a, b) {
               a - b
@@ -139,52 +139,52 @@ bootstrap_cv_lrm <- function(db,
     
     # Brier score
     
-    Score_app = map2(
+    Score_app = purrr::map2(
       orig_data, lrm_apparent,
-      ~ Score(list("Logistic" = .y),
-              formula = frm_score,
-              data = .x, 
-              metrics = "brier",
-              summary = "ipa"
+      ~ riskrRegression::Score(list("Logistic" = .y),
+                               formula = frm_score,
+                               data = .x, 
+                               metrics = "brier",
+                               summary = "ipa"
       )$Brier$score
     ),
     
-    Brier_app = map_dbl(Score_app, ~ .x$Brier[[2]]),
-    IPA_app = map_dbl(Score_app, ~ .x$IPA[[2]]),
+    Brier_app = purrr::map_dbl(Score_app, ~ .x$Brier[[2]]),
+    IPA_app =purrr:: map_dbl(Score_app, ~ .x$IPA[[2]]),
     
-    Score_orig = map2(
+    Score_orig = purrr::map2(
       orig_data, lrm_boot,
-      ~ Score(list("Logistic" = .y),
-              formula = frm_score,
-              data = .x, 
-              metrics = "brier",
-              summary = "ipa"
+      ~ riskRegression::Score(list("Logistic" = .y),
+                              formula = frm_score,
+                              data = .x, 
+                              metrics = "brier",
+                              summary = "ipa"
       )$Brier$score
     ),
     
-    Brier_orig = map_dbl(Score_orig, ~ .x$Brier[[2]]),
-    IPA_orig = map_dbl(Score_orig, ~ .x$IPA[[2]]),
+    Brier_orig = purrr::map_dbl(Score_orig, ~ .x$Brier[[2]]),
+    IPA_orig = purrr::map_dbl(Score_orig, ~ .x$IPA[[2]]),
     
-    Score_boot = map2(
+    Score_boot = purrr::map2(
       boot_data, lrm_boot,
-      ~ Score(list("Logistic" = .y),
-              formula = frm_score,
-              data = .x, 
-              metrics = "brier",
-              summary = "ipa"
+      ~ riskRegression::Score(list("Logistic" = .y),
+                              formula = frm_score,
+                              data = .x,
+                              metrics = "brier",
+                              summary = "ipa"
       )$Brier$score
     ),
     
-    Brier_boot = map_dbl(Score_boot, ~ .x$Brier[[2]]),
-    IPA_boot = map_dbl(Score_boot, ~ .x$IPA[[2]]),
-    Brier_diff = map2_dbl(
+    Brier_boot = purrr::map_dbl(Score_boot, ~ .x$Brier[[2]]),
+    IPA_boot = purrr::map_dbl(Score_boot, ~ .x$IPA[[2]]),
+    Brier_diff = purrr::map2_dbl(
       Brier_boot, Brier_orig,
       function(a, b) {
         a - b
       }
     ),
     
-    IPA_diff = map2_dbl(
+    IPA_diff = purrr::map2_dbl(
       IPA_boot, IPA_orig,
       function(a, b) {
         a - b
