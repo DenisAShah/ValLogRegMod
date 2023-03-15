@@ -33,7 +33,7 @@ vdata$pred <- exp(vdata$lp) / (1 + exp(vdata$lp))
 ## C-index
 
 # External validation
-val_vdata <- rcorr.cens(
+val_vdata <- Hmisc::rcorr.cens(
   vdata$lp, 
   S = vdata$tum_res)
 
@@ -159,7 +159,7 @@ res_calmeas
 # Brier score and scaled Brier 
 
 # Validation data
-score_vdata <- Score(
+score_vdata <- riskRegression::Score(
   list(vdata$pred),
   formula = tum_res ~ 1,
   data = vdata,
