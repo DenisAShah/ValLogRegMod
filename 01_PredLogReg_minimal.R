@@ -34,11 +34,11 @@ fit_lrm_ldh <- update(fit_lrm, . ~ . + lnldhst)
 
 ## C-index
 # Apparent validation
-val_rdata <- rcorr.cens(predict(fit_lrm), 
-                        S = rdata$tum_res)
+val_rdata <- Hmisc::rcorr.cens(predict(fit_lrm),
+                               S = rdata$tum_res)
 
 # External validation
-val_vdata <- rcorr.cens(
+val_vdata <- Hmisc::rcorr.cens(
   predict(fit_lrm, newdata = vdata), 
   S = vdata$tum_res)
 
@@ -182,7 +182,7 @@ res_calmeas
 # Brier score and scaled Brier 
 
 # Development data
-score_rdata <- Score(
+score_rdata <- riskRegression::Score(
   list("Development set" = fit_lrm),
   formula = tum_res ~ 1,
   data = rdata,
@@ -195,7 +195,7 @@ score_rdata <- Score(
 score_rdata$Brier$score
 
 # Validation data
-score_vdata <- Score(
+score_vdata <- riskRegression::Score(
   list("Validation set" = fit_lrm),
   formula = tum_res ~ 1,
   data = vdata,
