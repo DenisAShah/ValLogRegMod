@@ -126,29 +126,29 @@ Here we investigate the potential non-linear relation between continuous predict
 ```{r,ff, warning=FALSE, fig.align='center', eval=FALSE, echo=TRUE}
 
 # Models without splines
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~
+                      ter_pos + preafp + prehcg +
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 # Models with splines
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm_rcs <- lrm(tum_res ~ 
-                   ter_pos + preafp + prehcg + 
-                   rcs(sqpost, 3) + rcs(reduc10, 3) ,
-                   data = rdata, x = T, y = T)
+fit_lrm_rcs <- rms::lrm(tum_res ~
+                          ter_pos + preafp + prehcg +
+                          rcs(sqpost, 3) + rcs(reduc10, 3),
+                        data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 
 # print(fit_lrm_rcs)
 # print(summary(fit_lrm_rcs))
 # print(anova(fit_lrm_rcs))
-P_lrm_sqpost_rcs <- Predict(fit_lrm_rcs, "sqpost")
-P_lrm_reduc10_rcs <- Predict(fit_lrm_rcs, "reduc10")
+P_lrm_sqpost_rcs <- rms::Predict(fit_lrm_rcs, "sqpost")
+P_lrm_reduc10_rcs <- rms::Predict(fit_lrm_rcs, "reduc10")
 options(datadist = NULL)
 
 oldpar <- par(mfrow = c(1, 2), mar = c(5, 5, 1, 1))
@@ -256,13 +256,13 @@ Both the graphical comparison and the AIC comparison suggested no relevant depar
 + Logistic regression risk prediction model without LDH
 
 ```{r, summary_lrm1, fig.align='center',warning=FALSE}
-dd <- datadist(rdata)
+dd <- rms::datadist(rdata)
 options(datadist = "dd")
 options(prType = "html")
-fit_lrm1 <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm1 <- rms::lrm(tum_res ~
+                       ter_pos + preafp + prehcg + 
+                       sqpost + reduc10,
+                     data = rdata, x = T, y = T)
 print(fit_lrm1)
 # print(summary(fit_lrm))
 options(datadist = NULL)
@@ -271,13 +271,13 @@ options(datadist = NULL)
 + Logistic regression risk prediction model with LDH
 
 ```{r, summary_lrm2, fig.align='center',warning=FALSE}
-dd <- datadist(rdata)
+dd <- rms::datadist(rdata)
 options(datadist = "dd")
 options(prType = "html")
-fit_lrm2 <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10 + lnldhst,
-               data = rdata, x = T, y = T)
+fit_lrm2 <- rms::lrm(tum_res ~ 
+                       ter_pos + preafp + prehcg +
+                       sqpost + reduc10 + lnldhst,
+                     data = rdata, x = T, y = T)
 print(fit_lrm2)
 # print(summary(fit_lrm2))
 options(datadist = NULL)
@@ -293,13 +293,13 @@ To get further insight into the effect of the covariates, we plot the covariate 
   <summary>Click to expand code</summary>
 ```{r, plot_risk, fig.align='center',warning=FALSE, echo=TRUE, eval=FALSE}
 # Models -------------
-dd <- datadist(rdata)
+dd <- rms::datadist(rdata)
 options(datadist = "dd")
 options(prType = "html")
-fit_lrm1 <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm1 <- rms::lrm(tum_res ~ 
+                       ter_pos + preafp + prehcg + 
+                       sqpost + reduc10,
+                     data = rdata, x = T, y = T)
 # print(summary(fit_lrm))
 options(datadist = NULL)
 
@@ -404,19 +404,19 @@ More details are in ["Assessing the performance of prediction models: a framewor
 ```{r, discrimination, warning=FALSE, message=FALSE, echo=TRUE}
 
 # Models
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~ 
+                      ter_pos + preafp + prehcg +
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 
 # C-index
 # Apparent validation
-val_rdata <- rcorr.cens(predict(fit_lrm), 
-                        S = rdata$tum_res)
+val_rdata <- Hmisc::rcorr.cens(predict(fit_lrm),
+                               S = rdata$tum_res)
 
 # Load function to calculate confidence intervals of c-statistic
 source(here::here('Functions/c_stat_ci.R'))
@@ -424,13 +424,13 @@ c_dev <- c_stat_ci(val_rdata)
 
 
 # Internal validation (bootstrapping)
-val_opt <- validate(fit = fit_lrm, B = 500)
+val_opt <- rms::validate(fit = fit_lrm, B = 500)
 c_optimism <- round(0.5 * 
                       (1 +
                       val_opt["Dxy","index.corrected"]), 2)
 
 # External validation
-val_vdata <- rcorr.cens(
+val_vdata <- Hmisc::rcorr.cens(
   predict(fit_lrm, newdata = vdata), 
   S = vdata$tum_res)
 
@@ -449,20 +449,20 @@ dslope_vdata <- discr_slope(fit_lrm,
                             new_data = vdata)
 
 # Bootstrap confidence intervals for discrimination slope
-rboot <- bootstraps(rdata, B = 1000)
-vboot <- bootstraps(vdata, B = 1000)
+rboot <- rsample::bootstraps(rdata, B = 1000)
+vboot <- rsample::bootstraps(vdata, B = 1000)
 
 discr_slope_boot <- function(split) {
   discr_slope(fit = fit_lrm,
-              y = analysis(split)$tum_res,
-              new_data = analysis(split))
+              y = rsample::analysis(split)$tum_res,
+              new_data = rsample::analysis(split))
 }
 
 rboot <- rboot |>
-  mutate(dslope = map_dbl(splits, discr_slope_boot))
+  dplyr::mutate(dslope = purrr::map_dbl(splits, discr_slope_boot))
 
 vboot <- vboot |>
-  mutate(dslope = map_dbl(splits, discr_slope_boot))
+  dplyr::mutate(dslope = purrr::map_dbl(splits, discr_slope_boot))
 
 # Optimism-corrected discrimination slope
 source(here::here("Functions/internal_cv_lrm.R"))
@@ -546,12 +546,12 @@ The mean calibration can be estimated:
   <summary>Click to expand code</summary>
 ```{r, mean_cal, fig.align='center',echo=TRUE, eval=FALSE, message=FALSE, warning=FALSE}
 # Models
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~
+                      ter_pos + preafp + prehcg +
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 # Calibration-in-the-large
@@ -618,12 +618,12 @@ The calibration slope indicates the overall strength of the linear predictor (LP
 ```{r, weak_cal, fig.align='center',echo=TRUE, eval=FALSE ,message=FALSE, warning=FALSE}
 # Models
 vdata$y <- as.numeric(vdata$tum_res) - 1
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~ 
+                      ter_pos + preafp + prehcg + 
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 # Calibration slope
@@ -658,14 +658,14 @@ the observed probabilities of the outcome (p(y=1)) in relation to the predicted 
 
 <details>
   <summary>Click to expand code</summary>
-```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE}
+```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.width=6}
 # Models
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~
+                      ter_pos + preafp + prehcg + 
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 ## Calibration plot
@@ -752,14 +752,14 @@ res_calmeas <-
 alpha <- .05
 B <- 1000 # Set B = 2000 although it takes more time
 set.seed(2022)
-vboot <- bootstraps(vdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Bootstrap calibration measures
 numsum_boot <- function(split) {
   
   pred <- predict(fit_lrm,
                   type = "fitted.ind",
-                  newdata = analysis(split))
+                  newdata = rsample::analysis(split))
 
  
 # Estimate actual risk - basic model
@@ -767,13 +767,13 @@ numsum_boot <- function(split) {
               x = T,
               y = T,
               family = binomial,
-              data = analysis(split)
+              data = rsample::analysis(split)
 ) 
  
 cal_obs_boot <- predict(vcal, 
                         type = "response",
                         se.fit = TRUE,
-                        newdata = analysis(split))
+                        newdata = rsample::analysis(split))
  # Save objects needed
 db_cal_boot <- data.frame(
   "obs" = cal_obs_boot$fit,
@@ -796,17 +796,17 @@ res_cal_boot <- data.frame(
 )
 }
 numsum_b <- vboot |>
-  mutate(num_cal_boot = map(splits, numsum_boot),
+  dplyr::mutate(num_cal_boot = purrr::map(splits, numsum_boot),
+                
+                ICI = purrr::map_dbl(num_cal_boot, ~ .x$ICI),
          
-         ICI = map_dbl(num_cal_boot, ~ .x$ICI),
+                E50 = purrr::map_dbl(num_cal_boot, ~ .x$E50),
          
-         E50 = map_dbl(num_cal_boot, ~ .x$E50),
-         
-         E90 = map_dbl(num_cal_boot, ~ .x$E90)
+                E90 = purrr::map_dbl(num_cal_boot, ~ .x$E90)
          )
 ```
 </details>
-```{r, moder_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```{r, moder_cal, fig.align='center', warning=FALSE, eval=TRUE, fig.height=6,fig.width=6}
 ```
 
 ```{r, res_numcal, message=FALSE,warning=FALSE, fig.align='center',include=TRUE, echo=FALSE}
@@ -850,14 +850,14 @@ More flexible, nonlinear, calibration curve can be considered using the 'seconda
 
 <details>
   <summary>Click to expand code</summary>
-```{r, moder_flex_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE}
+```{r, moder_flex_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE, fig.height=6, fig.width=6}
 # Models
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~
+                      ter_pos + preafp + prehcg + 
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 ## Calibration plot
@@ -932,7 +932,7 @@ legend("topleft",
 ```
 </details>
 
-```{r, moder_flex_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```{r, moder_flex_cal, fig.align='center', warning=FALSE, eval=TRUE, fig.height=6, fig.width=6}
 ```
 
 The corresponding calibration measures ICI, E50, and E90 may be calculated based on the estimated predicted probabilities using the a more flexible 'secondary' logistic regression model. 
@@ -949,19 +949,19 @@ Some confidence intervals are calculated using the bootstrap percentile method.
 ```{r, overall, warning=FALSE, message=FALSE, eval=FALSE, echo=TRUE}
 
 # Models -------------------
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~
+                      ter_pos + preafp + prehcg +
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 
 # Overall performance measures ----------------
 
 # Development data
-score_rdata <- Score(
+score_rdata <- riskRegression::Score(
   list("Development set" = fit_lrm),
   formula = tum_res ~ 1,
   data = rdata,
@@ -972,7 +972,7 @@ score_rdata <- Score(
 )
 
 # Validation data
-score_vdata <- Score(
+score_vdata <- riskRegression::Score(
   list("Validation set" = fit_lrm),
   formula = tum_res ~ 1,
   data = vdata,
@@ -1005,15 +1005,15 @@ optim_measures <- bootstrap_cv_lrm(
 # Bootstrapping data
 set.seed(2022)
 B <- 50 # number of bootstrap samples
-rboot <- bootstraps(rdata, times = B)
-vboot <- bootstraps(vdata, times = B)
+rboot <- rsample::bootstraps(rdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Score functions in any bootstrap data
 score_boot <- function(split) {
-  Score(
+  riskRegression::Score(
     list("Logistic" = fit_lrm),
     formula = tum_res ~ 1,
-    data = analysis(split),
+    data = rsample::analysis(split),
     conf.int = TRUE,
     metrics = c("auc","brier"),
     summary = c("ipa"),
@@ -1022,16 +1022,16 @@ score_boot <- function(split) {
 }
 
 # Development data
-rboot <- rboot |> mutate(
-  score = map(splits, score_boot),
-  scaled_brier = map_dbl(score, function(x) {
+rboot <- rboot |> dplyr::mutate(
+  score = purrr::map(splits, score_boot),
+  scaled_brier = purrr::map_dbl(score, function(x) {
     x$Brier$score[model == "Logistic"]$IPA
   })
 )
 # Validation data
-vboot <- vboot |> mutate(
-  score = map(splits, score_boot),
-  scaled_brier = map_dbl(score, function(x) {
+vboot <- vboot |> dplyr::mutate(
+  score = purrr::map(splits, score_boot),
+  scaled_brier = purrr::map_dbl(score, function(x) {
     x$Brier$score[model == "Logistic"]$IPA
   })
 )
@@ -1126,12 +1126,12 @@ More details are available in the paper of Vickers et al. [here](https://www.ncb
 source(here::here("Functions/dca.R"))
 
 # Models ------------------------------
-dd <- datadist(rdata, adjto.cat = "first")
+dd <- rms::datadist(rdata, adjto.cat = "first")
 options(datadist = "dd")
-fit_lrm <- lrm(tum_res ~ 
-               ter_pos + preafp + prehcg + 
-               sqpost + reduc10,
-               data = rdata, x = T, y = T)
+fit_lrm <- rms::lrm(tum_res ~ 
+                      ter_pos + preafp + prehcg +
+                      sqpost + reduc10,
+                    data = rdata, x = T, y = T)
 options(datadist = NULL)
 
 # Development data
