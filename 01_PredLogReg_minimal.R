@@ -98,6 +98,9 @@ res_cal
 
 ## Calibration plot --
 # First, prepare histogram of estimated risks for x-axis
+vdata$pred <- predict(fit_lrm,
+                      newdata = vdata,
+                      type = "response")
 spike_bounds <- c(0, 0.20)
 bin_breaks <- seq(0, 1, length.out = 100 + 1)
 freqs <- table(cut(vdata$pred, breaks = bin_breaks))
@@ -106,10 +109,6 @@ freqs_valid <- freqs[freqs > 0]
 freqs_rescaled <- spike_bounds[1] + (spike_bounds[2] - spike_bounds[1]) * 
   (freqs_valid - min(freqs_valid)) / (max(freqs_valid) - min(freqs_valid))
 
-
-vdata$pred <- predict(fit_lrm,
-                      newdata = vdata,
-                      type = "response")
 
 # Calibration based on a secondary logistic regression
 fit_cal <- glm(y ~ pred,
