@@ -156,7 +156,7 @@ More details are in ["Assessing the performance of prediction models: a framewor
 source(here::here('Functions/c_stat_ci.R'))
 
 # External validation
-val_vdata <- rcorr.cens(
+val_vdata <- Hmisc::rcorr.cens(
   x = vdata$pred, 
   S = vdata$tum_res)
 
@@ -171,18 +171,18 @@ dslope_vdata <- discr_slope(pred = vdata$pred,
 
 # Bootstrap confidence intervals for discrimination slope
 set.seed(2022)
-vboot <- bootstraps(vdata, B = 1000)
+vboot <- rsample::bootstraps(vdata, B = 1000)
 
 # Modify the function using the name of the variables
 # indicating the estimated predicted probability 
 # (in this case vdata$pred) and the binary outcome
 # (in this case vdata$tum_res)
 dslope_boot <- function(split) {
-  discr_slope(pred = analysis(split)$pred,
-         y = analysis(split)$tum_res)
+  discr_slope(pred = rsample::analysis(split)$pred,
+         y = rsample::analysis(split)$tum_res)
 }
 vboot <- vboot |>
-  mutate(dslope = map_dbl(splits, dslope_boot))
+  dplyr::mutate(dslope = purrr::map_dbl(splits, dslope_boot))
 ```
 </details>
 
@@ -328,7 +328,7 @@ the observed probabilities of the outcome (p(y=1)) in relation to the predicted 
 
 <details>
   <summary>Click to expand code</summary>
-```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE}
+```{r, moder_cal, fig.align='center',echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE, fig.width=6, fig.height=6}
 
 ## Calibration plot
 # First, prepare histogram of estimated risks for x-axis
@@ -411,7 +411,7 @@ res_calmeas <-
 alpha <- .05
 B <- 1000 # Set B = 2000 although it takes more time
 set.seed(2022)
-vboot <- bootstraps(vdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Bootstrap calibration measures
 numsum_boot <- function(split) {
@@ -421,7 +421,7 @@ numsum_boot <- function(split) {
               family = binomial,
               x = T,
               y = T,
-              data = analysis(split)
+              data = rsample::analysis(split)
 ) 
  
 cal_obs_boot <- predict(vcal, 
@@ -450,17 +450,17 @@ res_cal_boot <- data.frame(
 )
 }
 numsum_b <- vboot |>
-  mutate(num_cal_boot = map(splits, numsum_boot),
+  dplyr::mutate(num_cal_boot = purrr::map(splits, numsum_boot),
          
-         ICI = map_dbl(num_cal_boot, ~ .x$ICI),
+         ICI = purrr::map_dbl(num_cal_boot, ~ .x$ICI),
          
-         E50 = map_dbl(num_cal_boot, ~ .x$E50),
+         E50 = purrr::map_dbl(num_cal_boot, ~ .x$E50),
          
-         E90 = map_dbl(num_cal_boot, ~ .x$E90)
+         E90 = purrr::map_dbl(num_cal_boot, ~ .x$E90)
          )
 ```
 </details>
-```{r, moder_cal, fig.align='center', warning=FALSE, eval=TRUE}
+```{r, moder_cal, fig.align='center', warning=FALSE, eval=TRUE, fig.width=6, fig.height=6}
 ```
 
 ```{r, res_numcal, message=FALSE,warning=FALSE, fig.align='center',include=TRUE, echo=FALSE}
@@ -515,7 +515,7 @@ Some confidence intervals are calculated using the bootstrap percentile method.
 # Overall performance measures ----------------
 
 # Validation data
-score_vdata <- Score(
+score_vdata <- riskRegression::Score(
   list("Validation set" = vdata$pred),
   formula = tum_res ~ 1,
   data = vdata,
@@ -536,14 +536,14 @@ score_vdata <- Score(
 # Bootstrapping data
 set.seed(2022)
 B <- 50 # number of bootstrap samples
-vboot <- bootstraps(vdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Score functions in any bootstrap data
 score_boot <- function(split) {
   Score(
-    list("Logistic" = analysis(split)$pred),
+    list("Logistic" = rsample::analysis(split)$pred),
     formula = tum_res ~ 1,
-    data = analysis(split),
+    data = rsample::analysis(split),
     conf.int = TRUE,
     metrics = c("auc","brier"),
     summary = c("ipa"),
@@ -553,9 +553,9 @@ score_boot <- function(split) {
 
 
 # Validation data
-vboot <- vboot |> mutate(
-  score = map(splits, score_boot),
-  scaled_brier = map_dbl(score, function(x) {
+vboot <- vboot |> dplyr::mutate(
+  score = purrr::map(splits, score_boot),
+  scaled_brier = purrr::map_dbl(score, function(x) {
     x$Brier$score[model == "Logistic"]$IPA
   })
 )

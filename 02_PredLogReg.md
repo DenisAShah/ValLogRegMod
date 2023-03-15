@@ -1,25 +1,39 @@
 Validation of logistic regression risk prediction models
 ================
 
--   [Steps](#steps)
-    -   [Installing and loading packages and import
-        data](#installing-and-loading-packages-and-import-data)
-    -   [Data description](#data-description)
-        -   [Descriptive statistics](#descriptive-statistics)
--   [Goal 1 - Assessing performance of a logistic regression risk
-    prediction
-    model](#goal-1---assessing-performance-of-a-logistic-regression-risk-prediction-model)
-    -   [1.1 Estimate the predicted probabilities in the validation
-        data](#11-estimate-the-predicted-probabilities-in-the-validation-data)
-    -   [1.1 Discrimination](#11-discrimination)
-    -   [2.2 Calibration](#22-calibration)
-        -   [2.2.1 Mean calibration](#221-mean-calibration)
-        -   [2.2.2 Weak calibration](#222-weak-calibration)
-        -   [2.2.3 Moderate calibration](#223-moderate-calibration)
-    -   [2.3 Overall performance
-        measures](#23-overall-performance-measures)
--   [Goal 2 - Clinical utility](#goal-2---clinical-utility)
--   [Reproducibility ticket](#reproducibility-ticket)
+- <a href="#steps" id="toc-steps">Steps</a>
+  - <a href="#installing-and-loading-packages-and-import-data"
+    id="toc-installing-and-loading-packages-and-import-data">Installing and
+    loading packages and import data</a>
+  - <a href="#data-description" id="toc-data-description">Data
+    description</a>
+    - <a href="#descriptive-statistics"
+      id="toc-descriptive-statistics">Descriptive statistics</a>
+- <a
+  href="#goal-1---assessing-performance-of-a-logistic-regression-risk-prediction-model"
+  id="toc-goal-1---assessing-performance-of-a-logistic-regression-risk-prediction-model">Goal
+  1 - Assessing performance of a logistic regression risk prediction
+  model</a>
+  - <a
+    href="#11-estimate-the-predicted-probabilities-in-the-validation-data"
+    id="toc-11-estimate-the-predicted-probabilities-in-the-validation-data">1.1
+    Estimate the predicted probabilities in the validation data</a>
+  - <a href="#11-discrimination" id="toc-11-discrimination">1.1
+    Discrimination</a>
+  - <a href="#22-calibration" id="toc-22-calibration">2.2 Calibration</a>
+    - <a href="#221-mean-calibration" id="toc-221-mean-calibration">2.2.1 Mean
+      calibration</a>
+    - <a href="#222-weak-calibration" id="toc-222-weak-calibration">2.2.2 Weak
+      calibration</a>
+    - <a href="#223-moderate-calibration"
+      id="toc-223-moderate-calibration">2.2.3 Moderate calibration</a>
+  - <a href="#23-overall-performance-measures"
+    id="toc-23-overall-performance-measures">2.3 Overall performance
+    measures</a>
+- <a href="#goal-2---clinical-utility"
+  id="toc-goal-2---clinical-utility">Goal 2 - Clinical utility</a>
+- <a href="#reproducibility-ticket"
+  id="toc-reproducibility-ticket">Reproducibility ticket</a>
 
 ## Steps
 
@@ -89,13 +103,13 @@ Steyerberg et al. (2010).
 
 #### Descriptive statistics
 
-<table class="table table-striped" style="margin-left: auto; margin-right: auto;">
+<table style="NAborder-bottom: 0; margin-left: auto; margin-right: auto;" class="table table-striped">
 <thead>
 <tr>
 <th style="text-align:left;">
 Characteristic
 </th>
-<th style="text-align:left;">
+<th style="text-align:center;">
 N = 273
 </th>
 </tr>
@@ -105,7 +119,7 @@ N = 273
 <td style="text-align:left;">
 Residual tumor at postchemotherapy resection
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 197 (72%)
 </td>
 </tr>
@@ -113,7 +127,7 @@ Residual tumor at postchemotherapy resection
 <td style="text-align:left;">
 Primary tumor teratoma positive
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 169 (62%)
 </td>
 </tr>
@@ -121,7 +135,7 @@ Primary tumor teratoma positive
 <td style="text-align:left;">
 Elevated prechemotherapy AFP
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 205 (75%)
 </td>
 </tr>
@@ -129,7 +143,7 @@ Elevated prechemotherapy AFP
 <td style="text-align:left;">
 Elevated Prechemotherapy HCG
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 198 (73%)
 </td>
 </tr>
@@ -137,14 +151,14 @@ Elevated Prechemotherapy HCG
 <td style="text-align:left;">
 Square root of postchemotherapy mass size (mm)
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 </td>
 </tr>
 <tr>
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
 Mean (SD)
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 7.79 (3.08)
 </td>
 </tr>
@@ -152,7 +166,7 @@ Mean (SD)
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
 Median (Range)
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 8.02 (1.41, 17.32)
 </td>
 </tr>
@@ -160,14 +174,14 @@ Median (Range)
 <td style="text-align:left;">
 Reduction in mass size per 10%
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 </td>
 </tr>
 <tr>
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
 Mean (SD)
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 1 (6)
 </td>
 </tr>
@@ -175,11 +189,18 @@ Mean (SD)
 <td style="text-align:left;padding-left: 2em;" indentlevel="1">
 Median (Range)
 </td>
-<td style="text-align:left;">
+<td style="text-align:center;">
 1 (-15, 10)
 </td>
 </tr>
 </tbody>
+<tfoot>
+<tr>
+<td style="padding: 0; " colspan="100%">
+<sup>1</sup> n (%)
+</td>
+</tr>
+</tfoot>
 </table>
 
 ## Goal 1 - Assessing performance of a logistic regression risk prediction model
@@ -232,23 +253,22 @@ vdata$pred <- exp(vdata$lp) / (1 + exp(vdata$lp))
 
 We here calculate:
 
--   The c-statistic: it is a rank order statistic for predictions
-    against true outcomes. The concordance (c) statistic is the most
-    commonly used performance measure to indicate the discriminative
-    ability of generalized linear regression models. For a binary
-    outcome, c is identical to the area under the Receiver Operating
-    Characteristic (ROC) curve, which plots the sensitivity (true
-    positive rate) against 1 – (false positive rate) for consecutive
-    cutoffs for the probability of an outcome. Accurate predictions
-    discriminate between those with and those without the outcome.
+- The c-statistic: it is a rank order statistic for predictions against
+  true outcomes. The concordance (c) statistic is the most commonly used
+  performance measure to indicate the discriminative ability of
+  generalized linear regression models. For a binary outcome, c is
+  identical to the area under the Receiver Operating Characteristic
+  (ROC) curve, which plots the sensitivity (true positive rate) against
+  1 – (false positive rate) for consecutive cutoffs for the probability
+  of an outcome. Accurate predictions discriminate between those with
+  and those without the outcome.
 
--   Discrimination slope: it can be used as a simple measure for how
-    well subjects with and without the outcome are separated. It is
-    calculated as the absolute difference in average predictions for
-    those with and without the outcome. Visualization is readily
-    possible with a box plot or a histogram, which will show less
-    overlap between those with and those without the outcome for a
-    better discriminating model.
+- Discrimination slope: it can be used as a simple measure for how well
+  subjects with and without the outcome are separated. It is calculated
+  as the absolute difference in average predictions for those with and
+  without the outcome. Visualization is readily possible with a box plot
+  or a histogram, which will show less overlap between those with and
+  those without the outcome for a better discriminating model.
 
 More details are in [“Assessing the performance of prediction models: a
 framework for some traditional and novel
@@ -265,7 +285,7 @@ Click to expand code
 source(here::here('Functions/c_stat_ci.R'))
 
 # External validation
-val_vdata <- rcorr.cens(
+val_vdata <- Hmisc::rcorr.cens(
   x = vdata$pred, 
   S = vdata$tum_res)
 
@@ -280,18 +300,18 @@ dslope_vdata <- discr_slope(pred = vdata$pred,
 
 # Bootstrap confidence intervals for discrimination slope
 set.seed(2022)
-vboot <- bootstraps(vdata, B = 1000)
+vboot <- rsample::bootstraps(vdata, B = 1000)
 
 # Modify the function using the name of the variables
 # indicating the estimated predicted probability 
 # (in this case vdata$pred) and the binary outcome
 # (in this case vdata$tum_res)
 dslope_boot <- function(split) {
-  discr_slope(pred = analysis(split)$pred,
-         y = analysis(split)$tum_res)
+  discr_slope(pred = rsample::analysis(split)$pred,
+         y = rsample::analysis(split)$tum_res)
 }
 vboot <- vboot |>
-  mutate(dslope = map_dbl(splits, dslope_boot))
+  dplyr::mutate(dslope = purrr::map_dbl(splits, dslope_boot))
 ```
 
 </details>
@@ -378,15 +398,15 @@ over- predicts the actual risk.
 
 The mean calibration can be estimated:
 
--   using the Observed and Expected ratio. The observed number of events
-    is the sum of the events (or cases) present in the data. The
-    expected is estimated summing the predicted probability of the event
-    estimated by the model. Ratio equals to 1 indicates perfect (mean)
-    calibration, values lower or greater than 1 indicate over- and
-    under- prediction, respectively.
+- using the Observed and Expected ratio. The observed number of events
+  is the sum of the events (or cases) present in the data. The expected
+  is estimated summing the predicted probability of the event estimated
+  by the model. Ratio equals to 1 indicates perfect (mean) calibration,
+  values lower or greater than 1 indicate over- and under- prediction,
+  respectively.
 
--   calibration intercept (or calibration-in-the-large): indicates the
-    extent that predictions are systematically too low or too high.
+- calibration intercept (or calibration-in-the-large): indicates the
+  extent that predictions are systematically too low or too high.
 
 <details>
 <summary>
@@ -474,7 +494,7 @@ calibration is defined as mean calibration ratio and calibration slope
 of unity(or calibration intercept equals to zero). The calibration slope
 indicates the overall strength of the linear predictor (LP), which can
 be interpreted as the level of overfitting (slope \<1) or underfitting
-(slope>1). A value of slope smaller than 1 can also be interpreted as
+(slope\>1). A value of slope smaller than 1 can also be interpreted as
 reflecting a need for shrinkage of regression coefficients in a
 prediction model.
 
@@ -631,7 +651,7 @@ res_calmeas <-
 alpha <- .05
 B <- 1000 # Set B = 2000 although it takes more time
 set.seed(2022)
-vboot <- bootstraps(vdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Bootstrap calibration measures
 numsum_boot <- function(split) {
@@ -641,7 +661,7 @@ numsum_boot <- function(split) {
               family = binomial,
               x = T,
               y = T,
-              data = analysis(split)
+              data = rsample::analysis(split)
 ) 
  
 cal_obs_boot <- predict(vcal, 
@@ -670,19 +690,19 @@ res_cal_boot <- data.frame(
 )
 }
 numsum_b <- vboot |>
-  mutate(num_cal_boot = map(splits, numsum_boot),
+  dplyr::mutate(num_cal_boot = purrr::map(splits, numsum_boot),
          
-         ICI = map_dbl(num_cal_boot, ~ .x$ICI),
+         ICI = purrr::map_dbl(num_cal_boot, ~ .x$ICI),
          
-         E50 = map_dbl(num_cal_boot, ~ .x$E50),
+         E50 = purrr::map_dbl(num_cal_boot, ~ .x$E50),
          
-         E90 = map_dbl(num_cal_boot, ~ .x$E90)
+         E90 = purrr::map_dbl(num_cal_boot, ~ .x$E90)
          )
 ```
 
 </details>
 
-<img src="imgs/02_PredLogReg/moder_cal-1.png" width="672" style="display: block; margin: auto;" />
+<img src="imgs/02_PredLogReg/moder_cal-1.png" width="576" style="display: block; margin: auto;" />
 
 <table class="table table-striped" style="margin-left: auto; margin-right: auto;">
 <thead>
@@ -816,7 +836,7 @@ Click to expand code
 # Overall performance measures ----------------
 
 # Validation data
-score_vdata <- Score(
+score_vdata <- riskRegression::Score(
   list("Validation set" = vdata$pred),
   formula = tum_res ~ 1,
   data = vdata,
@@ -837,14 +857,14 @@ score_vdata <- Score(
 # Bootstrapping data
 set.seed(2022)
 B <- 50 # number of bootstrap samples
-vboot <- bootstraps(vdata, times = B)
+vboot <- rsample::bootstraps(vdata, times = B)
 
 # Score functions in any bootstrap data
 score_boot <- function(split) {
   Score(
-    list("Logistic" = analysis(split)$pred),
+    list("Logistic" = rsample::analysis(split)$pred),
     formula = tum_res ~ 1,
-    data = analysis(split),
+    data = rsample::analysis(split),
     conf.int = TRUE,
     metrics = c("auc","brier"),
     summary = c("ipa"),
@@ -854,9 +874,9 @@ score_boot <- function(split) {
 
 
 # Validation data
-vboot <- vboot |> mutate(
-  score = map(splits, score_boot),
-  scaled_brier = map_dbl(score, function(x) {
+vboot <- vboot |> dplyr::mutate(
+  score = purrr::map(splits, score_boot),
+  scaled_brier = purrr::map_dbl(score, function(x) {
     x$Brier$score[model == "Logistic"]$IPA
   })
 )
@@ -1119,7 +1139,7 @@ avoidable interventions (e.g tumor resection per 100 patients) by:
 
 where *NB*<sub>model</sub> is the net benefit of the prediction model,
 *NB*<sub>all</sub> is the net benefit of the strategy treat all and
-*p*<sub>*t*</sub> is the risk threshold.
+$p_{t}$ is the risk threshold.
 
 ## Reproducibility ticket
 
@@ -1127,75 +1147,70 @@ where *NB*<sub>model</sub> is the net benefit of the prediction model,
 sessionInfo()
 ```
 
-    ## R version 4.1.2 (2021-11-01)
+    ## R version 4.2.1 (2022-06-23 ucrt)
     ## Platform: x86_64-w64-mingw32/x64 (64-bit)
-    ## Running under: Windows 10 x64 (build 19044)
+    ## Running under: Windows 10 x64 (build 22621)
     ## 
     ## Matrix products: default
     ## 
     ## locale:
-    ## [1] LC_COLLATE=English_United States.1252 
-    ## [2] LC_CTYPE=English_United States.1252   
-    ## [3] LC_MONETARY=English_United States.1252
-    ## [4] LC_NUMERIC=C                          
-    ## [5] LC_TIME=English_United States.1252    
+    ## [1] LC_COLLATE=English_Netherlands.utf8  LC_CTYPE=English_Netherlands.utf8   
+    ## [3] LC_MONETARY=English_Netherlands.utf8 LC_NUMERIC=C                        
+    ## [5] LC_TIME=English_Netherlands.utf8    
     ## 
     ## attached base packages:
     ## [1] splines   stats     graphics  grDevices utils     datasets  methods  
     ## [8] base     
     ## 
     ## other attached packages:
-    ##  [1] webshot_0.5.2             gridExtra_2.3            
-    ##  [3] rsample_0.1.1             forcats_0.5.1            
-    ##  [5] stringr_1.4.0             dplyr_1.0.7              
-    ##  [7] purrr_0.3.4               readr_2.1.1              
-    ##  [9] tidyr_1.1.4               tibble_3.1.6             
-    ## [11] tidyverse_1.3.1           boot_1.3-28              
-    ## [13] gtsummary_1.5.0           kableExtra_1.3.4         
-    ## [15] knitr_1.36                plotrix_3.8-2            
-    ## [17] riskRegression_2021.10.10 rms_6.2-0                
-    ## [19] SparseM_1.81              Hmisc_4.6-0              
-    ## [21] ggplot2_3.3.5             Formula_1.2-4            
-    ## [23] survival_3.2-13           lattice_0.20-45          
+    ##  [1] webshot_0.5.4             gridExtra_2.3            
+    ##  [3] rsample_1.1.0             forcats_0.5.2            
+    ##  [5] stringr_1.4.1             dplyr_1.0.10             
+    ##  [7] purrr_0.3.5               readr_2.1.3              
+    ##  [9] tidyr_1.2.1               tibble_3.1.8             
+    ## [11] tidyverse_1.3.2           boot_1.3-28              
+    ## [13] gtsummary_1.6.2           kableExtra_1.3.4         
+    ## [15] knitr_1.40                plotrix_3.8-2            
+    ## [17] riskRegression_2022.09.23 rms_6.3-0                
+    ## [19] SparseM_1.81              Hmisc_4.7-1              
+    ## [21] ggplot2_3.3.6             Formula_1.2-4            
+    ## [23] survival_3.3-1            lattice_0.20-45          
     ## [25] rio_0.5.29                pacman_0.5.1             
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.3.1         backports_1.3.0      systemfonts_1.0.3   
-    ##   [4] plyr_1.8.6           listenv_0.8.0        TH.data_1.1-0       
-    ##   [7] digest_0.6.29        foreach_1.5.1        htmltools_0.5.2     
-    ##  [10] fansi_0.5.0          magrittr_2.0.1       checkmate_2.0.0     
-    ##  [13] cluster_2.1.2        tzdb_0.2.0           openxlsx_4.2.4      
-    ##  [16] recipes_0.1.17       globals_0.14.0       modelr_0.1.8        
-    ##  [19] mets_1.2.9           gower_0.2.2          matrixStats_0.61.0  
-    ##  [22] sandwich_3.0-1       svglite_2.0.0        jpeg_0.1-9          
-    ##  [25] colorspace_2.0-2     rvest_1.0.2          haven_2.4.3         
-    ##  [28] xfun_0.28            crayon_1.4.2         jsonlite_1.7.2      
-    ##  [31] zoo_1.8-9            iterators_1.0.13     glue_1.5.1          
-    ##  [34] gtable_0.3.0         ipred_0.9-12         MatrixModels_0.5-0  
-    ##  [37] future.apply_1.8.1   scales_1.1.1         mvtnorm_1.1-3       
-    ##  [40] DBI_1.1.1            Rcpp_1.0.7           viridisLite_0.4.0   
-    ##  [43] cmprsk_2.2-10        htmlTable_2.3.0      foreign_0.8-81      
-    ##  [46] stats4_4.1.2         lava_1.6.10          prodlim_2019.11.13  
-    ##  [49] htmlwidgets_1.5.4    httr_1.4.2           RColorBrewer_1.1-2  
-    ##  [52] ellipsis_0.3.2       pkgconfig_2.0.3      nnet_7.3-16         
-    ##  [55] dbplyr_2.1.1         here_1.0.1           utf8_1.2.2          
-    ##  [58] caret_6.0-90         tidyselect_1.1.1     rlang_0.4.12        
-    ##  [61] reshape2_1.4.4       munsell_0.5.0        cellranger_1.1.0    
-    ##  [64] tools_4.1.2          cli_3.1.0            generics_0.1.1      
-    ##  [67] broom_0.7.10         evaluate_0.14        fastmap_1.1.0       
-    ##  [70] yaml_2.2.1           ModelMetrics_1.2.2.2 fs_1.5.1            
-    ##  [73] timereg_2.0.1        zip_2.2.0            future_1.23.0       
-    ##  [76] nlme_3.1-153         quantreg_5.86        xml2_1.3.3          
-    ##  [79] compiler_4.1.2       rstudioapi_0.13      curl_4.3.2          
-    ##  [82] png_0.1-7            gt_0.3.1             reprex_2.0.1        
-    ##  [85] broom.helpers_1.5.0  stringi_1.7.6        highr_0.9           
-    ##  [88] Matrix_1.3-4         vctrs_0.3.8          pillar_1.6.4        
-    ##  [91] lifecycle_1.0.1      furrr_0.2.3          data.table_1.14.2   
-    ##  [94] conquer_1.2.1        R6_2.5.1             latticeExtra_0.6-29 
-    ##  [97] parallelly_1.29.0    codetools_0.2-18     polspline_1.1.19    
-    ## [100] MASS_7.3-54          assertthat_0.2.1     rprojroot_2.0.2     
-    ## [103] withr_2.4.3          multcomp_1.4-17      parallel_4.1.2      
-    ## [106] hms_1.1.1            grid_4.1.2           rpart_4.1-15        
-    ## [109] timeDate_3043.102    class_7.3-19         rmarkdown_2.11      
-    ## [112] pROC_1.18.0          numDeriv_2016.8-1.1  lubridate_1.8.0     
-    ## [115] base64enc_0.1-3
+    ##   [1] googledrive_2.0.0   TH.data_1.1-1       colorspace_2.0-3   
+    ##   [4] deldir_1.0-6        ellipsis_0.3.2      rprojroot_2.0.3    
+    ##   [7] htmlTable_2.4.1     fs_1.5.2            base64enc_0.1-3    
+    ##  [10] rstudioapi_0.14     furrr_0.3.1         listenv_0.8.0      
+    ##  [13] MatrixModels_0.5-1  lubridate_1.8.0     prodlim_2019.11.13 
+    ##  [16] fansi_1.0.3         mvtnorm_1.1-3       xml2_1.3.3         
+    ##  [19] codetools_0.2-18    jsonlite_1.8.2      gt_0.7.0           
+    ##  [22] broom_1.0.1         dbplyr_2.2.1        cluster_2.1.3      
+    ##  [25] png_0.1-7           compiler_4.2.1      httr_1.4.4         
+    ##  [28] backports_1.4.1     assertthat_0.2.1    Matrix_1.5-1       
+    ##  [31] fastmap_1.1.0       gargle_1.2.1        cli_3.4.1          
+    ##  [34] htmltools_0.5.3     quantreg_5.94       tools_4.2.1        
+    ##  [37] gtable_0.3.1        glue_1.6.2          Rcpp_1.0.9         
+    ##  [40] cellranger_1.1.0    vctrs_0.4.2         svglite_2.1.0      
+    ##  [43] nlme_3.1-157        iterators_1.0.14    broom.helpers_1.9.0
+    ##  [46] xfun_0.33           globals_0.16.1      openxlsx_4.2.5     
+    ##  [49] rvest_1.0.3         lifecycle_1.0.3     googlesheets4_1.0.1
+    ##  [52] future_1.28.0       polspline_1.1.20    MASS_7.3-57        
+    ##  [55] zoo_1.8-11          scales_1.2.1        hms_1.1.2          
+    ##  [58] parallel_4.2.1      sandwich_3.0-2      RColorBrewer_1.1-3 
+    ##  [61] yaml_2.3.5          curl_4.3.3          rpart_4.1.16       
+    ##  [64] latticeExtra_0.6-30 stringi_1.7.8       highr_0.9          
+    ##  [67] foreach_1.5.2       checkmate_2.1.0     zip_2.2.1          
+    ##  [70] lava_1.6.10         mets_1.3.1          rlang_1.0.6        
+    ##  [73] pkgconfig_2.0.3     systemfonts_1.0.4   evaluate_0.17      
+    ##  [76] htmlwidgets_1.5.4   cmprsk_2.2-11       tidyselect_1.2.0   
+    ##  [79] here_1.0.1          parallelly_1.32.1   magrittr_2.0.3     
+    ##  [82] R6_2.5.1            generics_0.1.3      multcomp_1.4-20    
+    ##  [85] DBI_1.1.3           pillar_1.8.1        haven_2.5.1        
+    ##  [88] foreign_0.8-82      withr_2.5.0         nnet_7.3-17        
+    ##  [91] future.apply_1.9.1  crayon_1.5.2        modelr_0.1.9       
+    ##  [94] interp_1.1-3        utf8_1.2.2          tzdb_0.3.0         
+    ##  [97] rmarkdown_2.17      timereg_2.0.2       jpeg_0.1-9         
+    ## [100] grid_4.2.1          readxl_1.4.1        data.table_1.14.2  
+    ## [103] reprex_2.0.2        digest_0.6.29       numDeriv_2016.8-1.1
+    ## [106] munsell_0.5.0       viridisLite_0.4.1
