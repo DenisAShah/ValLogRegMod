@@ -32,7 +32,7 @@ both rmarkdown files, or run them line-by-line.
 
 | Name                                                         | Affiliation                           | Role                  |
 | ------------------------------------------------------------ | ------------------------------------- | ----------------------|
-| [Daniele Giardiello](https://github.com/danielegiardiello/)  | The Netherlands Cancer Institute (NL) <br /> Leiden University Medical Center (NL) <br /> EURAC research (IT) | Author/maintainer     |
+| [Daniele Giardiello](https://github.com/danielegiardiello/)  | University of Milan-Bicocca (IT) | Author/maintainer     |
 
 
 
